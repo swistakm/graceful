@@ -4,13 +4,7 @@ graceful - falcon REST done with grace
 .. include:: readme.rst
 
 
-Detailed documentation
-======================
-
-.. toctree::
-   :maxdepth: 2
-
-   api-reference
+.. include:: modules.rst
 
 
 Indices and tables
