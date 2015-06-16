@@ -47,10 +47,12 @@ class BaseField(object):
             describing resource on OPTIONS requests).
             Note: it is recommended to use field names that are
             self-explanatory intead of relying on field labels.
-        :param source: source of representation object/attribute that will be
-            passed to field. Special '*' value allowed that will pass whole
-            object to field.
+        :param source: name of internal object key/attribute that will be
+            passed to field on `.to_representation()` call. Special '*' value
+            is allowed that will pass whole object to field.
         :param validators: list of validator callables.
+        :param many: set to True if field is in fact a list of given type
+           objects
         """
         self.label = label
         self.source = source

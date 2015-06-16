@@ -51,7 +51,7 @@ class ListAPIResource(BaseAPIResource):
         raise NotImplementedError("get_list method not implemented")
 
 
-class PaginatedListResource(ListAPIResource):
+class PaginatedListAPIResource(ListAPIResource):
     """
     Basic paginated resource class. Adds two parameters to control basic
     (page size, page number) parameters with some default values.
@@ -91,7 +91,7 @@ class PaginatedListResource(ListAPIResource):
 
     def get_meta_and_content(self, req, params, **kwargs):
         meta, content = super(
-            PaginatedListResource, self
+            PaginatedListAPIResource, self
         ).get_meta_and_content(req, params)
 
         self.add_pagination_meta(params, meta)

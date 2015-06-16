@@ -4,18 +4,184 @@ by [Django REST framework](http://www.django-rest-framework.org/) - mostly by
 how object serialization is done but more emphasis here is put on API to
 being self-descriptive.
 
+Features:
 
-# usage
-
+* generic classes for list and single object resources
+* simple but extendable pagination
+* structured responses with content/meta separation
+* declarative fields and parameters
+* self-descriptive-everything: API description accessible both in python and
+  through `OPTIONS` requests
+* painless validation
+* 100% tests coverage
+* python3 exclusive!
 
 
 
 # python3 only
 
-**Important**: `graceful` is python3 exclusive. *Right now* is a good time to
-forget about python2 and there are no plans for making `graceful` python2 
-compatibile although it would be pretty straightforward do do so with existing
-tools (like six).
+**Important**: `graceful` is python3 exclusive because **right now** should be
+a good time to forget about python2. There are no plans for making `graceful` 
+python2 compatibile although it would be pretty straightforward do do so with
+existing tools (like six).
+
+# usage
+Here will be presented very simple example of working API made with
+``graceful``. For extended tutorial and more information please refer to
+documentation.
+
+```python
+import falcon
+
+from graceful.resources.generic import ObjectAPIResource, ListAPIResource
+from graceful.serializers import BaseSerializer
+from graceful.fields import IntField, RawField
+from graceful.parameters import StringParam
+
+api = application = falcon.API()
+
+# lets pretend that this is our backend storage
+CATS_STORAGE = [
+    {"id": 0, "name": "kitty", "breed": "saimese"},
+    {"id": 1, "name": "lucie", "breed": "maine coon"},
+    {"id": 2, "name": "molly", "breed": "sphynx"},
+]
+
+
+# this is how we represent cats in our API
+class CatSerializer(BaseSerializer):
+    id = IntField("cat identification number")
+    name = RawField("cat name")
+    breed = RawField("official breed name")
+
+
+# single cat resource
+class Cat(ObjectAPIResource):
+    """
+    Single cat identified by its id
+    """
+    serializer = CatSerializer()
+
+    def get_object(self, params, meta, cat_id, **kwargs):
+        try:
+            return [cat for cat in CATS_STORAGE if cat['id'] == int(cat_id)][0]
+        except IndexError:
+            raise falcon.HTTPNotFound
+
+
+# cat list resource
+class CatList(ListAPIResource):
+    """
+    List of all cats in our API
+    """
+    serializer = CatSerializer()
+
+    breed = StringParam("set this param to filter cats by breed")
+
+    def get_list(self, params, meta, **kwargs):
+        if 'breed' in params:
+            filtered = [
+                cat for cat in CATS_STORAGE if cat['breed'] == params['breed']
+            ]
+            return filtered
+        else:
+            return CATS_STORAGE
+
+
+api = application = falcon.API()
+api.add_route("/v0/cats/", CatList())
+api.add_route("/v0/cats/{cat_id}", Cat())
+```
+
+Now you're ready to query it (here with awesome [hhtpie](http://httpie.org) 
+tool):
+
+```
+$ http localhost:8888/v0/cats/?breed=saimese
+HTTP/1.1 200 OK
+Connection: close
+Date: Tue, 16 Jun 2015 08:43:05 GMT
+Server: gunicorn/19.3.0
+content-length: 116
+content-type: application/json
+
+{
+    "content": [
+        {
+            "breed": "saimese",
+            "id": 0,
+            "name": "kitty"
+        }
+    ],
+    "meta": {
+        "params": {
+            "breed": "saimese",
+            "indent": 0
+        }
+    }
+}
+```
+
+Or access API description issuing `OPTIONS` request:
+
+```
+$ http OPTIONS localhost:8888/v0/cats
+HTTP/1.1 200 OK
+Connection: close
+Date: Tue, 16 Jun 2015 08:40:00 GMT
+Server: gunicorn/19.3.0
+content-length: 740
+content-type: application/json
+
+{
+    "details": "List of all cats in our API",
+    "fields": {
+        "breed": {
+            "details": "official breed name",
+            "label": null,
+            "spec": null,
+            "type": "string"
+        },
+        "id": {
+            "details": "cat identification number",
+            "label": null,
+            "spec": null,
+            "type": "int"
+        },
+        "name": {
+            "details": "cat name",
+            "label": null,
+            "spec": null,
+            "type": "string"
+        }
+    },
+    "methods": [
+        "GET",
+        "OPTIONS"
+    ],
+    "name": "CatList",
+    "params": {
+        "breed": {
+            "default": null,
+            "details": "set this param to filter cats by breed",
+            "label": null,
+            "required": false,
+            "spec": null,
+            "type": "string"
+        },
+        "indent": {
+            "default": "0",
+            "details": "JSON output indentation. Set to 0 if output should not be formated.",
+            "label": null,
+            "required": false,
+            "spec": null,
+            "type": "integer"
+        }
+    },
+    "path": "/v0/cats",
+    "type": "list"
+}
+```
 
 
 # contributing

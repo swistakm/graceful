@@ -8,7 +8,7 @@ from graceful.fields import RawField
 from graceful.resources.generic import (
     ListAPIResource,
     ObjectAPIResource,
-    PaginatedListResource)
+    PaginatedListAPIResource)
 
 # note: from now all definitions of resp and req must be annoteded with `noqa`
 #       this is because py.test fixtures do not cooperate easily with flake8
@@ -113,7 +113,7 @@ def test_object_resource_get(req, resp):  # noqa
 
 def test_paginated_list_resource(req, resp):  # noqa
 
-    class PaginatedWithMore(PaginatedListResource):
+    class PaginatedWithMore(PaginatedListAPIResource):
         serializer = ExampleSerializer()
 
         def get_list(self, params, meta, **kwargs):
@@ -129,7 +129,7 @@ def test_paginated_list_resource(req, resp):  # noqa
     assert body['meta']['has_more']
     assert body['meta']['next']
 
-    class PaginatedWithoutMore(PaginatedListResource):
+    class PaginatedWithoutMore(PaginatedListAPIResource):
         serializer = ExampleSerializer()
 
         def get_list(self, params, meta, **kwargs):
