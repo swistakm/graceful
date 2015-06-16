@@ -84,16 +84,20 @@ class BaseSerializer(object, metaclass=MetaSerializer):
 
         return representation
 
-    def from_representation(self, representation):
+    def from_representation(self, representation, partial=False):
         return {
             # if field has explicitely specified source then use it
             # else fallback to field name.
             # Note: field does not know its name
-            field.source or name: field.from_representation(
-                representation[name]
+            field.source or name: field.validate(
+                field.from_representation(
+                    representation[name]
+                )
             )
             for name, field
             in self.fields.items()
+            # if partial allowed then we create only partial object dict
+            if not partial or name in representation
         }
 
     def create(self, data):

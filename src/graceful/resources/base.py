@@ -4,6 +4,7 @@ import inspect
 from collections import OrderedDict
 
 from falcon import errors
+import falcon
 
 from graceful.parameters import BaseParam, IntParam
 
@@ -220,3 +221,11 @@ class BaseAPIResource(object, metaclass=MetaResource):
         """
         resp.body = json.dumps(self.describe(req, resp))
         resp.content_type = 'application/json'
+
+    def validate_data(self, req, partial=False):
+        if req.content_type == 'application/json':
+            representation = json.loads(req.body)
+            return self.serializer.from_representation(representation, partial)
+        else:
+            raise falcon.HTTPUnsupportedMediaType
+
