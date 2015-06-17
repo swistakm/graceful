@@ -34,6 +34,7 @@ def test_base_field_describe():
         'details': "bar",
         'type': "anything",
         'spec': None,
+        'read_only': False
     }
 
     # test extending descriptions by call with kwargs

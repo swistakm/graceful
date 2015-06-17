@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 import falcon
 
-from graceful.resources.generic import ObjectAPIResource, ListAPIResource
 from graceful.serializers import BaseSerializer
 from graceful.fields import IntField, RawField
 from graceful.parameters import StringParam
+from graceful.validators import ValidationError
+from graceful.resources.generic import (
+    RetrieveUpdateDeleteAPI,
+    PaginatedListCreateAPI,
+)
 
 api = application = falcon.API()
 
@@ -16,46 +20,72 @@ CATS_STORAGE = [
 ]
 
 
+def new_id():
+    return max(map(lambda cat: cat['id'], CATS_STORAGE)) + 1
+
+
+def is_lower_case(value):
+    if value.lower() != value:
+        raise ValidationError("{} is not lowercase".format(value))
+
+
 # this is how we represent cats in our API
 class CatSerializer(BaseSerializer):
-    id = IntField("cat identification number")
-    name = RawField("cat name")
+    id = IntField("cat identification number", read_only=True)
+    name = RawField("cat name", validators=[is_lower_case])
     breed = RawField("official breed name")
 
 
-# single cat resource
-class Cat(ObjectAPIResource):
-    """
-    Single cat identified by its id
-    """
-    serializer = CatSerializer()
+class V1(object):
+    class Cat(RetrieveUpdateDeleteAPI):
+        """
+        Single cat identified by its id
+        """
+        serializer = CatSerializer()
 
-    def get_object(self, params, meta, cat_id, **kwargs):
-        try:
-            return [cat for cat in CATS_STORAGE if cat['id'] == int(cat_id)][0]
-        except IndexError:
-            raise falcon.HTTPNotFound
+        def get_cat(self, cat_id):
+            try:
+                return [cat for cat in CATS_STORAGE if cat['id'] == int(cat_id)][0]
+            except IndexError:
+                raise falcon.HTTPNotFound
 
+        def update(self, params, meta, validated, **kwargs):
+            cat_id = kwargs['cat_id']
+            cat = self.get_cat(cat_id=cat_id)
+            cat.update(validated)
 
-# cat list resource
-class CatList(ListAPIResource):
-    """
-    List of all cats in our API
-    """
-    serializer = CatSerializer()
+            return validated
 
-    breed = StringParam("set this param to filter cats by breed")
+        def retrieve(self, params, meta, **kwargs):
+            cat_id = kwargs['cat_id']
+            return self.get_cat(cat_id)
 
-    def get_list(self, params, meta, **kwargs):
-        if 'breed' in params:
-            filtered = [
-                cat for cat in CATS_STORAGE if cat['breed'] == params['breed']
-            ]
-            return filtered
-        else:
-            return CATS_STORAGE
+        def delete(self, params, meta, **kwargs):
+            cat_id = kwargs['cat_id']
+            cat = self.get_cat(cat_id=cat_id)
+            CATS_STORAGE.remove(cat)
 
+    class CatList(PaginatedListCreateAPI):
+        """
+        List of all cats in our API
+        """
+        serializer = CatSerializer()
 
-api = application = falcon.API()
-api.add_route("/v0/cats/", CatList())
-api.add_route("/v0/cats/{cat_id}", Cat())
+        breed = StringParam("set this param to filter cats by breed")
+
+        def list(self, params, meta, **kwargs):
+            if 'breed' in params:
+                filtered = [
+                    cat for cat in CATS_STORAGE if cat['breed'] == params['breed']
+                ]
+                return filtered
+            else:
+                return CATS_STORAGE
+
+        def create(self, params, meta, validated, **kwargs):
+            validated['id'] = new_id()
+            CATS_STORAGE.append(validated)
+            return validated
+
+api.add_route("/v1/cats/{cat_id}", V1.Cat())
+api.add_route("/v1/cats/", V1.CatList())

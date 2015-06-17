@@ -7,6 +7,7 @@ from falcon import errors
 import falcon
 
 from graceful.parameters import BaseParam, IntParam
+from graceful.serializers import DeserializationError
 
 
 class MetaResource(type):
@@ -153,6 +154,22 @@ class BaseAPIResource(object, metaclass=MetaResource):
 
         resp.content_type = 'application/json'
 
+    def make_body(self, resp, meta, content):
+        response = {
+            'meta': meta,
+            'content': content
+        }
+        resp.content_type = 'application/json'
+        resp.body = json.dumps(response)
+
+    def require_meta_and_content(self, content_handler, params, **kwargs):
+        meta = {
+            'params': params
+        }
+        content = content_handler(params, meta, **kwargs)
+        meta['params'] = params
+        return meta, content
+
     def allowed_methods(self):
         return [
             method
@@ -222,10 +239,25 @@ class BaseAPIResource(object, metaclass=MetaResource):
         resp.body = json.dumps(self.describe(req, resp))
         resp.content_type = 'application/json'
 
-    def validate_data(self, req, partial=False):
+    def require_representation(self, req):
         if req.content_type == 'application/json':
-            representation = json.loads(req.body)
-            return self.serializer.from_representation(representation, partial)
+            body = req.stream.read()
+            return json.loads(body.decode('utf-8'))
         else:
-            raise falcon.HTTPUnsupportedMediaType
+            raise falcon.HTTPUnsupportedMediaType(
+                description="only JSON supported"
+            )
 
+    def validated_object(self, req, partial=False):
+        representation = self.require_representation(req)
+
+        try:
+            object_dict = self.serializer.from_representation(representation)
+            self.serializer.validate(object_dict, partial)
+
+        except DeserializationError as err:
+            # when working on Resource we know that we can finally raise
+            # bad request exceptions
+            raise err.as_bad_request()
+
+        return object_dict

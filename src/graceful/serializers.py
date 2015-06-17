@@ -2,7 +2,48 @@
 from collections import OrderedDict
 from collections.abc import Mapping, MutableMapping
 
+from falcon.errors import HTTPBadRequest
+
 from graceful.fields import BaseField
+from graceful.validators import ValidationError
+
+
+class DeserializationError(ValueError):
+    """
+    Raised when error happened during deserialization of object
+    """
+    def __init__(
+            self, missing=None, forbidden=None, invalid=None, failed=None
+    ):
+        self.missing = missing
+        self.forbidden = forbidden
+        self.invalid = invalid
+        self.failed = failed
+
+    def as_bad_request(self):
+        return HTTPBadRequest(
+            title="Representation deserialization failed",
+            description=self._get_description()
+        )
+
+    def _get_description(self):
+        """ Return human readable description that explains everything that
+        went wrong with deserialization.
+        """
+        return ", ".join([
+            part for part in [
+                "missing: {}".format(self.missing) if self.missing else "",
+                (
+                    "forbidden: {}".format(self.forbidden)
+                    if self.forbidden else ""
+                ),
+                "invalid: {}:".format(self.invalid) if self.invalid else "",
+                (
+                    "failed to parse: {}".format(self.failed)
+                    if self.failed else ""
+                )
+            ] if part
+        ])
 
 
 class MetaSerializer(type):
@@ -59,7 +100,6 @@ class MetaSerializer(type):
 
 
 class BaseSerializer(object, metaclass=MetaSerializer):
-
     @property
     def fields(self):
         return getattr(self, self.__class__._fields_storage_key)
@@ -84,50 +124,59 @@ class BaseSerializer(object, metaclass=MetaSerializer):
 
         return representation
 
-    def from_representation(self, representation, partial=False):
-        return {
-            # if field has explicitely specified source then use it
-            # else fallback to field name.
-            # Note: field does not know its name
-            field.source or name: field.validate(
-                field.from_representation(
+    def from_representation(self, representation):
+        object_dict = {}
+        failed = {}
+
+        for name, field in self.fields.items():
+            if name not in representation:
+                continue
+
+            try:
+                # if field has explicitely specified source then use it
+                # else fallback to field name.
+                # Note: field does not know its name
+                object_dict[field.source or name] = field.from_representation(
                     representation[name]
                 )
-            )
-            for name, field
-            in self.fields.items()
-            # if partial allowed then we create only partial object dict
-            if not partial or name in representation
-        }
+            except ValueError as err:
+                failed[name] = str(err)
 
-    def create(self, data):
-        """
-        The purpose of this method is not yet defined because we haven't dealt
-        with object creation.
+        if failed:
+            # if failed to parse we eagerly perform validation so full
+            # information about what is wrong will be returned
+            try:
+                self.validate(object_dict)
+                raise DeserializationError()
+            except DeserializationError as err:
+                err.failed = failed
+                raise
 
-        :param data: data to be used when instantiating object
-        :return:
-        """
-        raise NotImplementedError(
-            "{cls}.create() method not implemented".format(
-                cls=self.__class__.__name__
-            )
-        )
+        return object_dict
 
-    def update(self, obj, data):
-        """
-        The purpose of this method is not yet defined because we haven't dealt
-        with object creation.
+    def validate(self, obj, partial=False):
+        # note: we are checking for all mising and invalid fields so we can
+        # return exception with all fields that are missing and should
+        # exist instead of single one
+        missing = [
+            name for name, field in self.fields.items()
+            if not partial and name not in obj and not field.read_only
+        ]
 
-        :param obj: object instance
-        :param data: data to be modified in object instance
-        :return:
-        """
-        raise NotImplementedError(
-            "{cls}.update() method not implemented".format(
-                cls=self.__class__.__name__
-            )
-        )
+        forbidden = [
+            field for field in obj
+            if field not in self.fields or self.fields[field].read_only
+        ]
+
+        invalid = {}
+        for field_name, value in obj.items():
+            try:
+                self.fields[field_name].validate(value)
+            except ValidationError as err:
+                invalid[field_name] = str(err)
+
+        if any([missing, forbidden, invalid]):
+            raise DeserializationError(missing, forbidden, invalid)
 
     def get_attribute(self, obj, attr):
         """

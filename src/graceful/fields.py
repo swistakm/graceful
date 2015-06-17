@@ -13,6 +13,7 @@ class BaseField(object):
             source=None,
             validators=None,
             many=False,
+            read_only=False,
     ):
         """
         Base field class for subclassing. To create new field type
@@ -48,17 +49,20 @@ class BaseField(object):
             Note: it is recommended to use field names that are
             self-explanatory intead of relying on field labels.
         :param source: name of internal object key/attribute that will be
-            passed to field on `.to_representation()` call. Special '*' value
-            is allowed that will pass whole object to field.
+            passed to field on ``.to_representation()`` call. Special ``'*'``
+            value is allowed that will pass whole object to field.
         :param validators: list of validator callables.
         :param many: set to True if field is in fact a list of given type
            objects
+        :param read_only: True if field is read only and cannot be set/modified
+           by ``POST`` and ``PUT`` requests
         """
         self.label = label
         self.source = source
         self.details = details
         self.validators = validators or []
         self.many = many
+        self.read_only = read_only
 
     def from_representation(self, data):
         raise NotImplementedError(
@@ -97,6 +101,7 @@ class BaseField(object):
             'details': self.details,
             'type': "list of {}".format(self.type) if self.many else self.type,
             'spec': self.spec,
+            'read_only': self.read_only,
         }
         description.update(kwargs)
         return description

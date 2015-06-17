@@ -159,17 +159,6 @@ def test_serialiser_sources_representation():
     assert recreated == {"_name": "John", "_address": "US"}
 
 
-def test_implementation_hooks():
-    """
-    Test methods that are left for implementing raise NotImplementedError
-    """
-    with pytest.raises(NotImplementedError):
-        BaseSerializer().create({})
-
-    with pytest.raises(NotImplementedError):
-        BaseSerializer().update(None, {})
-
-
 def test_serializer_set_attribute():
     serializer = BaseSerializer()
 
