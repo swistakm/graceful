@@ -36,8 +36,10 @@ class MetaResource(type):
         Also collect all params from base classes in order that ensures
         params can be overriden.
 
-        :param bases: all base classes of created resource class
-        :param namespace: namespace as dictionary of attributes
+        Args:
+
+            bases: all base classes of created resource class
+            namespace (dict): namespace as dictionary of attributes
         """
         params = [
             (name, namespace.pop(name))
@@ -65,6 +67,11 @@ class MetaResource(type):
 
 
 class BaseAPIResource(object, metaclass=MetaResource):
+    """
+    Base Resouce class for handling resource responses, parameter
+    deserialization and validation of request included representations if
+    serializer is defined.
+    """
     indent = IntParam(
         """
         JSON output indentation. Set to 0 if output should not be formated.
@@ -76,34 +83,23 @@ class BaseAPIResource(object, metaclass=MetaResource):
 
     @property
     def params(self):
+        """
+        Dictionary of parameter meta-objects.
+        """
         return getattr(self, self.__class__._params_storage_key)
-
-    def get_meta_and_content(self, req, params, **kwargs):
-        """
-        Return tuple of meta and content dictionaries.
-
-        `meta` contains dictionary of additional information that describes
-        current API request (parsed parameters, pagination, telemetry)
-
-        `content` is an actual request result: representation of specific
-        resource.
-
-        :param req: request object
-        :param params: dictionary of parsed parameters
-        :param kwargs: dictionary of keyword arguments parsed from resource
-            url template.
-        :return: two-tuple containing (meta, content) dictionaries
-        """
-        return {
-            'params': params
-        }, {}
 
     def require_params(self, req):
         """
-        Perform basic required parameters check.
+        Require all parameters from request that are defined for this resource.
 
-        Raises falcon.errors.HTTPMissingParam if any of required prameters
-        is missing
+        Raises ``falcon.errors.HTTPMissingParam`` exception if any of required
+        parameters is missing and ``falcon.errors.HTTPInvalidParam`` if any
+        of parameters could not be understood (wrong format).
+
+        Args:
+
+            req (falcon.Request): request object
+
         """
         # TODO: handle specifying parameter multiple times in query string!
         params = {}
@@ -137,32 +133,55 @@ class BaseAPIResource(object, metaclass=MetaResource):
 
         return params
 
-    def on_get(self, req, resp, **kwargs):
+    def make_body(self, resp, params, meta, content):
         """
-        Respond with resource representation in as application/json content
-        type
-        """
-        params = self.require_params(req)
-        meta, content = self.get_meta_and_content(req, params, **kwargs)
+        Make response body in ``resp`` object using JSON serialization
 
+        Args:
+
+            resp (falcon.Response): response object where to include
+               serialized body
+            params (dict): dictionary of parsed parameters
+            meta (dict): dictionary of metadata to be included in 'meta'
+               section of response
+            content (dict): dictionary of response content (resource
+               representation) to be included in 'content' section of response
+
+        Returns:
+
+            None
+
+        """
         response = {
             'meta': meta,
             'content': content
         }
-
-        resp.body = json.dumps(response, indent=params['indent'] or None)
-
         resp.content_type = 'application/json'
-
-    def make_body(self, resp, meta, content):
-        response = {
-            'meta': meta,
-            'content': content
-        }
-        resp.content_type = 'application/json'
-        resp.body = json.dumps(response)
+        resp.body = json.dumps(
+            response,
+            indent=params['indent'] or None if 'indent' in params else None
+        )
 
     def require_meta_and_content(self, content_handler, params, **kwargs):
+        """
+        Require 'meta' and 'content' dictionaries using given
+        ``content_handler``.
+
+        Args:
+
+            content_handler (callable): function that accepts
+               ``params, meta, **kwargs`` argument and returns dictionary
+               for ``content`` response section
+            params (dict): dictionary of parsed resource parameters
+            kwargs (dict): dictionary of values created from resource url
+               template
+
+        Returns:
+
+            tuple: (meta, content) two-tuple with dictionaries of ``meta`` and
+              ``content`` response sections
+
+        """
         meta = {
             'params': params
         }
@@ -171,6 +190,14 @@ class BaseAPIResource(object, metaclass=MetaResource):
         return meta, content
 
     def allowed_methods(self):
+        """
+        Return list of allowed methods on this resource. This is only for
+        purpose of making resource description.
+
+        Returns:
+
+            list: list of allowed HTTP method names (uppercase)
+        """
         return [
             method
             for method, allowed in (
@@ -192,17 +219,24 @@ class BaseAPIResource(object, metaclass=MetaResource):
         keyword arguments and calling super().decribe() method call
         like following:
 
+        .. code-block:: python
+
              class SomeResource(BaseAPIResource):
                  def describe(req, resp, **kwargs):
                      return super(SomeResource, self).describe(
                          req, resp, type='list', **kwargs
                       )
 
-        :param req: falcon.Request object
-        :param resp: falcon.Response object
-        :param kwargs: additional keyword arguments to extend resource
-            description
-        :return: dict with resource descritpion information
+        Args:
+
+            req (falcon.Request): request object
+            resp (falcon.Response): response object
+            kwargs (dict): dictionary of values created from resource url
+               template
+
+        Returns:
+
+            dict: dictionary with resource descritpion information
         """
         description = {
             'params': OrderedDict([
@@ -214,7 +248,6 @@ class BaseAPIResource(object, metaclass=MetaResource):
                     self.__class__.__doc__ or
                     "This resource does not have description yet"
                 ),
-            'fields': self.serializer.describe() if self.serializer else None,
             'path': req.path,
             'name': self.__class__.__name__,
             'methods': self.allowed_methods()
@@ -230,16 +263,37 @@ class BaseAPIResource(object, metaclass=MetaResource):
             to OPTIONS requests if resource is routed in falcon with url
             template
 
-        :param req: falcon.Request object
-        :param resp: falcon.Responce object
-        :param kwargs: dict with additional arguments that can can be passed
-            to OPTIONS (ignored)
-        :return: None
+        Args:
+
+            req (falcon.Request): request object
+            resp (falcon.Response): response object
+            kwargs (dict): dictionary of values created from resource url
+               template
+
+
+        Returns:
+
+            None
+
         """
         resp.body = json.dumps(self.describe(req, resp))
         resp.content_type = 'application/json'
 
     def require_representation(self, req):
+        """
+        Require raw representation from falcon request object. This does not
+        perform any field parsing or validation.
+
+        Args:
+
+            req (falcon.Request): request object
+
+        Returns:
+
+            dict: raw dictionary of representation supplied in request body
+
+        """
+
         if req.content_type == 'application/json':
             body = req.stream.read()
             return json.loads(body.decode('utf-8'))
@@ -248,7 +302,25 @@ class BaseAPIResource(object, metaclass=MetaResource):
                 description="only JSON supported"
             )
 
-    def validated_object(self, req, partial=False):
+    def require_validated(self, req, partial=False):
+        """
+        Require fully validated internal object dict based on representation
+        sent in request body.
+
+        Args:
+
+            req (falcon.Request): request object
+            partial (bool): self to True if partially complete representation
+               is accepted (e.g. for patching instead of full update). Missing
+               fields in representation will be skiped.
+
+        Returns:
+
+            dict: dictionary of fields and values representing internal object.
+               Each value is a result of ``field.from_representation`` call.
+
+        """
+
         representation = self.require_representation(req)
 
         try:

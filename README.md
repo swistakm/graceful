@@ -33,10 +33,13 @@ documentation.
 ```python
 import falcon
 
-from graceful.resources.generic import ObjectAPIResource, ListAPIResource
 from graceful.serializers import BaseSerializer
 from graceful.fields import IntField, RawField
 from graceful.parameters import StringParam
+from graceful.resources.generic import (
+    RetrieveAPI,
+    ListAPI,
+)
 
 api = application = falcon.API()
 
@@ -50,27 +53,31 @@ CATS_STORAGE = [
 
 # this is how we represent cats in our API
 class CatSerializer(BaseSerializer):
-    id = IntField("cat identification number")
+    id = IntField("cat identification number", read_only=True)
     name = RawField("cat name")
     breed = RawField("official breed name")
 
 
-# single cat resource
-class Cat(ObjectAPIResource):
+class Cat(RetrieveUpdateDeleteAPI):
     """
     Single cat identified by its id
     """
     serializer = CatSerializer()
 
-    def get_object(self, params, meta, cat_id, **kwargs):
+    def get_cat(self, cat_id):
         try:
-            return [cat for cat in CATS_STORAGE if cat['id'] == int(cat_id)][0]
+            return [
+                cat for cat in CATS_STORAGE if cat['id'] == int(cat_id)
+            ][0]
         except IndexError:
             raise falcon.HTTPNotFound
 
 
-# cat list resource
-class CatList(ListAPIResource):
+    def retrieve(self, params, meta, **kwargs):
+        cat_id = kwargs['cat_id']
+        return self.get_cat(cat_id)
+
+class CatList(PaginatedListCreateAPI):
     """
     List of all cats in our API
     """
@@ -78,19 +85,18 @@ class CatList(ListAPIResource):
 
     breed = StringParam("set this param to filter cats by breed")
 
-    def get_list(self, params, meta, **kwargs):
+    def list(self, params, meta, **kwargs):
         if 'breed' in params:
             filtered = [
-                cat for cat in CATS_STORAGE if cat['breed'] == params['breed']
+                cat for cat in CATS_STORAGE
+                if cat['breed'] == params['breed']
             ]
             return filtered
         else:
             return CATS_STORAGE
 
-
-api = application = falcon.API()
-api.add_route("/v0/cats/", CatList())
-api.add_route("/v0/cats/{cat_id}", Cat())
+api.add_route("/v1/cats/{cat_id}", Cat())
+api.add_route("/v1/cats/", CatList())
 ```
 
 Now you're ready to query it (here with awesome [hhtpie](http://httpie.org) 

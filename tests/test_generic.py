@@ -185,6 +185,14 @@ class RetrieveTestsMixin(object):
         self.simulate_request('/items/1', decode='utf-8')
         assert self.srmock.status == falcon.HTTP_NOT_FOUND
 
+    def test_options(self):
+        result = self.simulate_request(
+            '/items/1', decode='utf-8', method='OPTIONS'
+        )
+        description = json.loads(result)
+        assert description['type'] == 'object'
+        assert 'fields' in description
+
 
 class UpdateTestsMixin(object):
     """
@@ -274,6 +282,14 @@ class ListTestsMixin(object):
         self._assert_consistent_form(result)
 
         assert self.srmock.status == falcon.HTTP_OK
+
+    def test_options(self):
+        result = self.simulate_request(
+            '/items/', decode='utf-8', method='OPTIONS'
+        )
+        description = json.loads(result)
+        assert description['type'] == 'list'
+        assert 'fields' in description
 
 
 class PaginationTestsMixin(object):

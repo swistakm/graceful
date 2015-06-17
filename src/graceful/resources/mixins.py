@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import json
-
 import falcon
 from graceful.parameters import IntParam
 from graceful.resources.base import BaseAPIResource
@@ -13,7 +11,7 @@ class BaseMixin():
         meta, content = self.require_meta_and_content(
             handler, params, **kwargs
         )
-        self.make_body(resp, meta, content)
+        self.make_body(resp, params, meta, content)
         return content
 
 

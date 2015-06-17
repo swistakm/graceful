@@ -4,8 +4,6 @@
 All tested serializer classes should be defined within tests because
 we test how whole framework for defining new serializers works.
 """
-import pytest
-
 from graceful.fields import BaseField
 from graceful.serializers import BaseSerializer
 

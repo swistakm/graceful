@@ -8,15 +8,19 @@ from falcon import errors
 import falcon
 import pytest
 
-from graceful.resources.base import (
-    BaseAPIResource,
-)
+from graceful.resources.generic import Resource
+
 from graceful.parameters import StringParam, BaseParam
 
 
 # note: from now all definitions of resp and req must be annoteded with `noqa`
 #       this is because py.test fixtures do not cooperate easily with flake8
 from .test_fixtures import req, resp  # noqa
+
+
+class TestResource(Resource):
+    def retrieve(self, params, meta, **kwargs):
+        return None
 
 
 def test_base_resource_get(req, resp):  # noqa
@@ -27,7 +31,7 @@ def test_base_resource_get(req, resp):  # noqa
     :param req: falcon.Request object provided by `req` pytest fixture
     :param resp: falcon.Response object provided by`resp` pytest fixture
     """
-    resource = BaseAPIResource()
+    resource = TestResource()
 
     resource.on_get(req, resp)
 
@@ -37,7 +41,7 @@ def test_base_resource_get(req, resp):  # noqa
 
 
 def test_resource_indent(req, resp):  # noqa
-    resource = BaseAPIResource()
+    resource = TestResource()
 
     # default: without indent
     resource.on_get(req, resp)
@@ -57,7 +61,7 @@ def test_resource_meta(req, resp):  # noqa
     :param req: falcon.Request object provided by `req` pytest fixture
     :param resp: falcon.Response object provided by`resp` pytest fixture
     """
-    resource = BaseAPIResource()
+    resource = TestResource()
     resource.on_get(req, resp)
 
     body = json.loads(resp.body)
@@ -74,7 +78,7 @@ def test_required_params(req, resp):  # noqa
     :param req: falcon.Request object provided by `req` pytest fixture
     :param resp: falcon.Response object provided by`resp` pytest fixture
     """
-    class ParametrizedResource(BaseAPIResource):
+    class ParametrizedResource(TestResource):
         foo = StringParam(details="required foo!", required=True)
 
     resource = ParametrizedResource()
@@ -96,7 +100,7 @@ def test_resource_accepts_kwargs(req, resp):  # noqa
     :param req: falcon.Request object provided by `req` pytest fixture
     :param resp: falcon.Response object provided by`resp` pytest fixture
     """
-    resource = BaseAPIResource()
+    resource = TestResource()
     resource.on_get(req, resp, foo='bar')
 
 
@@ -108,13 +112,12 @@ def test_describe(req, resp):  # noqa
     :param resp: falcon.Response object provided by`resp` pytest fixture
     """
     # default description keys
-    resource = BaseAPIResource()
+    resource = Resource()
     description = resource.describe(req, resp)
     assert 'path' in description
     assert 'name' in description
     assert 'details' in description
     assert 'params' in description
-    assert 'fields' in description
     assert 'methods' in description
 
     # test extending of description through kwargs
@@ -135,7 +138,7 @@ def test_options(resp):  # noqa
     #       routing and dispatching procedure
     env = create_environ(method="OPTIONS")
     req = Request(env)   # noqa
-    resource = BaseAPIResource()
+    resource = Resource()
 
     resource.on_options(req, resp)
 
@@ -157,13 +160,13 @@ def test_options_with_additional_args(req, resp):  # noqa
     #       routing and dispatching procedure
     env = create_environ(method="OPTIONS")
     req = Request(env)   # noqa
-    resource = BaseAPIResource()
+    resource = Resource()
 
     resource.on_options(req, resp, additionnal_kwarg="foo")
 
 
 def test_declarative_parameters(req, resp):  # noqa
-    class SomeResource(BaseAPIResource):
+    class SomeResource(Resource):
         required_param = StringParam(details="some param", required=True)
         optional_param = StringParam(details="some param", required=False)
 
@@ -186,7 +189,7 @@ def test_parameter_inheritance():
     """
     Test that derrived classes inherit parameters and those can be overriden
     """
-    class SomeResource(BaseAPIResource):
+    class SomeResource(Resource):
         foo = StringParam(details="give me foo", required=False)
         bar = StringParam(details="give me bar", required=False)
 
@@ -209,7 +212,7 @@ def test_parameter_value_errors_translated_to_http_errors(req, resp):  # noqa
         def value(self, raw_value):
             raise ValueError("some error")
 
-    class InvalidResource(BaseAPIResource):
+    class InvalidResource(TestResource):
         foo = InvalidParam("invalid", "having this will always raise error")
 
     resource = InvalidResource()
@@ -224,7 +227,7 @@ def test_parameter_value_errors_translated_to_http_errors(req, resp):  # noqa
 
 
 def test_default_parameters(req):  # noqa
-    class ResourceWithDefaults(BaseAPIResource):
+    class ResourceWithDefaults(Resource):
         foo = StringParam(details="foo with defaults", default="default")
         bar = StringParam(details="bar w/o default")
 

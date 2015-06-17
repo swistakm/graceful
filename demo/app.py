@@ -45,7 +45,9 @@ class V1(object):
 
         def get_cat(self, cat_id):
             try:
-                return [cat for cat in CATS_STORAGE if cat['id'] == int(cat_id)][0]
+                return [
+                    cat for cat in CATS_STORAGE if cat['id'] == int(cat_id)
+                ][0]
             except IndexError:
                 raise falcon.HTTPNotFound
 
@@ -76,7 +78,8 @@ class V1(object):
         def list(self, params, meta, **kwargs):
             if 'breed' in params:
                 filtered = [
-                    cat for cat in CATS_STORAGE if cat['breed'] == params['breed']
+                    cat for cat in CATS_STORAGE
+                    if cat['breed'] == params['breed']
                 ]
                 return filtered
             else:
