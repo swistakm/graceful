@@ -137,12 +137,11 @@ class RetrieveAPI(RetrieveMixin, BaseAPIResource):
 class RetrieveUpdateAPI(UpdateMixin, RetrieveAPI):
     def _update(self, params, meta, **kwargs):
         return self.serializer.to_representation(
-            self.retrieve(params, meta, **kwargs)
+            self.update(params, meta, **kwargs)
         )
 
     def on_put(self, req, resp, **kwargs):
         validated = self.validated_object(req)
-
         return super(RetrieveUpdateAPI, self).on_put(
             req, resp,
             handler=partial(self._update, validated=validated),

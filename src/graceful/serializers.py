@@ -147,7 +147,9 @@ class BaseSerializer(object, metaclass=MetaSerializer):
             # information about what is wrong will be returned
             try:
                 self.validate(object_dict)
-                raise DeserializationError()
+                # note: this exception can be reached with partial==True
+                # since do not support partial updates yet this has 'no cover'
+                raise DeserializationError()  # pragma: no cover
             except DeserializationError as err:
                 err.failed = failed
                 raise
