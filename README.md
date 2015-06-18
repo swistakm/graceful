@@ -20,7 +20,7 @@ Features:
 * painless validation
 * 100% tests coverage
 * falcon>=0.3.0
-* python3 exclusive!
+* python3 exclusive (tested from 3.3 to 3.4)
 
 
 
