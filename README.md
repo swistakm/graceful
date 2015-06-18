@@ -14,6 +14,7 @@ Features:
   through `OPTIONS` requests
 * painless validation
 * 100% tests coverage
+* falcon>=0.3.0
 * python3 exclusive!
 
 
@@ -38,7 +39,7 @@ from graceful.fields import IntField, RawField
 from graceful.parameters import StringParam
 from graceful.resources.generic import (
     RetrieveAPI,
-    ListAPI,
+    PaginatedListAPI,
 )
 
 api = application = falcon.API()
@@ -58,7 +59,7 @@ class CatSerializer(BaseSerializer):
     breed = RawField("official breed name")
 
 
-class Cat(RetrieveUpdateDeleteAPI):
+class Cat(RetrieveAPI):
     """
     Single cat identified by its id
     """
@@ -77,7 +78,7 @@ class Cat(RetrieveUpdateDeleteAPI):
         cat_id = kwargs['cat_id']
         return self.get_cat(cat_id)
 
-class CatList(PaginatedListCreateAPI):
+class CatList(PaginatedListAPI):
     """
     List of all cats in our API
     """
