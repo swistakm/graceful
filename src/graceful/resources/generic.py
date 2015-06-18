@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from functools import partial
 
-from graceful.resources.base import BaseAPIResource
+from graceful.resources.base import BaseResource
 from graceful.resources.mixins import (
     RetrieveMixin,
     ListMixin,
@@ -12,11 +12,64 @@ from graceful.resources.mixins import (
 )
 
 
-class Resource(RetrieveMixin, BaseAPIResource):
+class Resource(RetrieveMixin, BaseResource):
+    """
+    Generic resource for single object retrieve type of endpoints without use
+    of automatic representation serialization and extensive field descriptions.
+
+    This still gives support for defining parameters.
+
+    Example usage:
+
+    .. code-block:
+
+        from graceful.resources.generic import Resource
+        from graceful.parameters import StringParam
+
+        class SampleResource(Resource):
+            dummy = StringParam("some example dummy parameter")
+
+            def retrieve(self, params, meta):
+                return {"sample": "resource"}
+
+    """
+
+
+class ListResource(ListMixin, BaseResource):
+    """
+    Generic resource for list object type of endpoints without use of
+    automatic representation serialization and extensive field descriptions
+
+    This still gives support for defining parameters.
+
+    Example usage:
+
+    .. code-block:
+
+        from graceful.resources.generic import ListResource
+        from graceful.parameters import StringParam
+
+        class SampleResource(ListResource):
+            some_filter = StringParam("some example filter parameter")
+
+            def list(self, params, meta):
+                return [{"sample": "resource"}]
+
+    """
     pass
 
 
-class RetrieveAPI(RetrieveMixin, BaseAPIResource):
+class RetrieveAPI(RetrieveMixin, BaseResource):
+    """
+    Generic resource that uses serializer for resource description,
+    serialization and validation.
+
+    Allowed methods:
+
+    * GET: retrieve resource representation (handled with ``.retrieve()``
+      method handler)
+
+    """
     serializer = None
 
     def describe(self, req, resp, **kwargs):
@@ -39,6 +92,18 @@ class RetrieveAPI(RetrieveMixin, BaseAPIResource):
 
 
 class RetrieveUpdateAPI(UpdateMixin, RetrieveAPI):
+    """
+    Generic resource that uses serializer for resource description,
+    serialization and validation.
+
+    Allowed methods:
+
+    * GET: retrieve resource representation handled with ``.retrieve()``
+      method handler
+    * PUT: update resource with representation provided in request body
+      (handled with ``.update()`` method handler)
+
+    """
     def _update(self, params, meta, **kwargs):
         return self.serializer.to_representation(
             self.update(params, meta, **kwargs)
@@ -54,10 +119,32 @@ class RetrieveUpdateAPI(UpdateMixin, RetrieveAPI):
 
 
 class RetrieveUpdateDeleteAPI(DeleteMixin, RetrieveUpdateAPI):
-    pass
+    """
+    Generic resource that uses serializer for resource description,
+    serialization and validation.
+
+    Allowed methods:
+
+    * GET: retrieve resource representation (handled with ``.retrieve()``
+      method handler)
+    * PUT: update resource with representation provided in request body
+      (handled with ``.update()`` method handler)
+    * DELETE: delete resource (handled with ``.delete()`` method handler)
+
+    """
 
 
-class ListAPI(ListMixin, BaseAPIResource):
+class ListAPI(ListMixin, BaseResource):
+    """
+    Generic resource that uses serializer for resource description,
+    serialization and validation.
+
+    Allowed methods:
+
+    * GET: list multiple resource instances representations (handled
+      with ``.list()`` method handler)
+
+    """
     def _list(self, params, meta, **kwargs):
         return [
             self.serializer.to_representation(obj)
@@ -77,6 +164,18 @@ class ListAPI(ListMixin, BaseAPIResource):
 
 
 class ListCreateAPI(CreateMixin, ListAPI):
+    """
+    Generic resource that uses serializer for resource description,
+    serialization and validation.
+
+    Allowed methods:
+
+    * GET: list multiple resource instances representations (handled
+      with ``.list()`` method handler)
+    * POST: create new resource from representation provided in request body
+      (handled with ``.create()`` method handler)
+
+    """
     def _create(self, params, meta, **kwargs):
         return self.serializer.to_representation(
             self.create(params, meta, **kwargs)
@@ -93,16 +192,44 @@ class ListCreateAPI(CreateMixin, ListAPI):
 
 
 class PaginatedListAPI(PaginatedMixin, ListAPI):
-    def _list(self, params, meta, **kwargs):
-        self.add_pagination_meta(params, meta)
+    """
+    Generic resource that uses serializer for resource description,
+    serialization and validation.
 
-        return super(PaginatedListAPI, self)._list(params, meta, **kwargs)
+    Adds simple pagination to list of resources.
+
+    Allowed methods:
+
+    * GET: list multiple resource instances representations (handled
+      with ``.list()`` method handler)
+
+    """
+    def _list(self, params, meta, **kwargs):
+        objects = super(PaginatedListAPI, self)._list(params, meta, **kwargs)
+        # note: we need to populate meta after objects are retrieved
+        self.add_pagination_meta(params, meta)
+        return objects
 
 
 class PaginatedListCreateAPI(PaginatedMixin, ListCreateAPI):
-    def _list(self, params, meta, **kwargs):
-        self.add_pagination_meta(params, meta)
+    """
+    Generic resource that uses serializer for resource description,
+    serialization and validation.
 
-        return super(PaginatedListCreateAPI, self)._list(
+    Adds simple pagination to list of resources.
+
+    Allowed methods:
+
+    * GET: list multiple resource instances representations (handled
+      with ``.list()`` method handler)
+    * POST: create new resource from representation provided in request body
+      (handled with ``.create()`` method handler)
+
+    """
+    def _list(self, params, meta, **kwargs):
+        objects = super(PaginatedListCreateAPI, self)._list(
             params, meta, **kwargs
         )
+        # note: we need to populate meta after objects are retrieved
+        self.add_pagination_meta(params, meta)
+        return objects

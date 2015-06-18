@@ -5,34 +5,35 @@ Resources are main building blocks in falcon. This is also true with
 ``graceful``.
 
 
-The most basic resource of all is a
-:class:`graceful.resources.base.BaseAPIResource` and all other resource classes
-inherit from it. It will not provide you full ``graceful`` features like
-object serialization, pagination etc. but it is a good starting point if you
-want to build everything by yourself but still need to have some consistent
-response structure and self-descriptive parameters.
+The most basic resource of all is a :class:`graceful.resources.base.BaseResource`
+and all other resource classes in in this package inherit from ``BaseResource``.
+It will not provide you with full set graceful features (like
+object serialization, pagination, resource fields descriptions etc.)
+but it is a good starting point if you want to build everything by yourself
+but still need to have some consistent response structure and
+self-descriptive parameters.
 
-In most simple case (only GET-allowed resources) the single method needs to be
-implemented:
+In most cases (simple GET-allowed resources) you need only to provide
+your own http GET method handler like following:
 
 
 .. code-block:: python
 
-   from graceful.resources.base import BaseAPIResource
+   from graceful.resources.base import BaseResource
+   from graceful.parameters import StringParam, IntParam
 
-   class SomeResource(BaseAPIResource):
-        def get_meta_and_content(self, req, params, **kwargs):
+   class SomeResource(BaseResource):
+        some_param = StringParam("example string param")
+        some_other_param = IntParam
 
-            # call to super will among others populate meta with deserialized
-            # dict of parameters
-            meta, content = super(SomeResource, self).get_meta_and_content(
-                self, req, params, **kwargs
-            )
+        def on_get(self, req, resp):
+            params = self.require_params(req)
 
-            # do with meta and content whatever you like
-            # ...
+            ## create your own response like always:
+            # resp.body = "some content"
 
-            return meta, content
+            ## or use following:
+            # self.make_body(resp, params, {}, 'some content')
 
 .. note::
 
@@ -42,46 +43,40 @@ implemented:
    response generation.
 
 
-Generic resources
------------------
+Generic API resources
+---------------------
 
-``graceful``provides you small set of generic resources in order to help you
+graceful provides you with some set of generic resources in order to help you
 describe how structured is data in your API. All of them expect that some
-serializer is provided as a class level attribute. For purpose of following
-examples let's assume that there is some kind of ``RawSerialiser`` that does
-not know anything about structure and always return data 'as-is' in both
-directions: from and to representation:
-
-.. code-block:: python
-
-    from graceful.serializers import BaseSerializer
-
-    class RawSerializer():
-        def to_representation(self, obj):
-            return obj
-
-        def from_representation(self, representation):
-            return obj
+serializer instance is provided as a class level attribute. Serializer will
+handle describing resource fields and also translation between
+resource representation and internal object values that you use inside of
+your application.
 
 
-ObjectAPIResource
-~~~~~~~~~~~~~~~~~
+RetrieveAPI
+~~~~~~~~~~~
 
-:class:`ObjectAPIResource` represents single element resource. In ``content``
-field of ``GET`` response it will return single object. On ``OPTIONS``request
-it will return additional field named ``fields`` that describe all serializer
+:class:`RetrieveAPI` represents single element serialized resource. In 'content'
+section of GET response it will return single object. On OPTIONSrequest
+it will return additional field named 'fields' that describes all serializer
 fields.
 
-It provides ``.get_object(self, params, meta, **kwargs):`` method handler that
-retrieves data about single object where:
+It expects from you to implement ``.retrieve(self, params, meta, **kwargs)``
+method handler that retrieves single object (e.g. from some storage) that will
+be later serialized using provided serializer.
 
-* ``params`` - is a dictionary of retrieved parameters (after deserialization
-  with parameter classes)
-* ``meta`` - is a prepopulated meta dictionary for storing meta information
-  about query (like processed params, processing time, etc) and does not
-  represent resource data
-* ``kwargs`` - is an additional dictionary of arguments retrieved from route
-  template
+``retrieve()`` accepts following arguments:
+
+* **params** *(dict)*: dictionary of parsed parameters accordingly
+  to definitions provided as resource class atributes.
+* **meta** *(dict)*: dictionary of meta parameters anything added
+  to this dict will will be later included in response
+  'meta' section. This can already prepopulated by method
+  that calls this handler.
+* **kwargs** *(dict)*: dictionary of values retrieved from route url
+  template by falcon. This is suggested way for providing
+  resource identifiers.
 
 
 Example usage:
@@ -91,10 +86,10 @@ Example usage:
     db = SomeDBInterface()
     api = application = falcon.API()
 
-    class FooResource(ObjectAPIResource):
+    class FooResource(RetrieveAPI):
         serializer = RawSerializer()
 
-        def get_object(self, params, meta, foo_id, **kwargs):
+        def retrieve(self, params, meta, foo_id, **kwargs):
             return db.Foo.get(id=foo_id)
 
     # note url template param that will be passed to `FooResource.get_object()`
@@ -102,25 +97,129 @@ Example usage:
 
 
 
-ListAPIResource
-~~~~~~~~~~~~~~~
+RetrieveUpdateAPI
+~~~~~~~~~~~~~~~~~
 
-:class:`ListAPIResource` represents list of resource instances. In ``content``
-field of ``GET`` response it will return single object. On ``OPTIONS``request
-it will return additional field named ``fields`` that describe all serializer
-fields.
+:class:`RetrieveUpdateAPI` extends :class:`RetrieveAPI` with capability to
+update objects with new data from resource representation provided in
+PUT request body.
 
-It provides ``.get_list(self, params, meta, **kwargs):`` method handler that
-retrieves data about single object where:
+It expects from you to implement same handlers as for :class:`RetrieveAPI`
+and also new ``.update(self, params, meta, validated, **kwargs)`` method handler
+that updates single object (e.g. in some storage). Updated object may or may
+not be returned in response 'content' section (this is optional)
 
-* ``params`` - is a dictionary of retrieved parameters (after deserialization
-  with parameter classes). Those should be used for filtering of objects.
-* ``meta`` - is a prepopulated meta dictionary for storing meta information
-  about query (like processed params, processing time, etc) and does not
-  represent resource data
-* ``kwargs`` - is an additional dictionary of arguments retrieved from route
-  template
+``update()`` accepts following arguments:
 
+* **params** *(dict)*: dictionary of parsed parameters accordingly
+  to definitions provided as resource class atributes.
+* **meta** *(dict)*: dictionary of meta parameters anything added
+  to this dict will will be later included in response
+  'meta' section. This can already prepopulated by method
+  that calls this handler.
+* **validated** *(dict)*: dictionary of internal object fields values
+  after converting from representation with full validation performed
+  accordingly to definition contained within serializer instance.
+* **kwargs** *(dict)*: dictionary of values retrieved from route url
+  template by falcon. This is suggested way for providing
+  resource identifiers.
+
+If update will return any value it should have same form as return value
+of ``retrieve()`` because it will be again translated into representation
+with serializer.
+
+
+Example usage:
+
+.. code-block:: python
+
+    db = SomeDBInterface()
+    api = application = falcon.API()
+
+    class FooResource(RetrieveUpdateAPI):
+        serializer = RawSerializer()
+
+        def retrieve(self, params, meta, foo_id, **kwargs):
+            return db.Foo.get(id=foo_id)
+
+        def update(self, params, meta, foo_id, **kwargs):
+            return db.Foo.update(id=foo_id)
+
+    # note url template param that will be passed to `FooResource.get_object()`
+    api.add_route('foo/{foo_id}', FooResource())
+
+
+RetrieveUpdateDeleteAPI
+~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`RetrieveUpdateDeleteAPI` extends :class:`RetrieveUpdateAPI` with
+capability to delete objects using DELETE requests.
+
+It expects from you to implement same handlers as for :class:`RetrieveUpdateAPI`
+and also new ``.delete(self, params, meta, **kwargs)`` method handler
+that deletes single object (e.g. in some storage).
+
+``delete()`` accepts following arguments:
+
+* **params** *(dict)*: dictionary of parsed parameters accordingly
+  to definitions provided as resource class atributes.
+* **meta** *(dict)*: dictionary of meta parameters anything added
+  to this dict will will be later included in response
+  'meta' section. This can already prepopulated by method
+  that calls this handler.
+* **kwargs** *(dict)*: dictionary of values retrieved from route url
+  template by falcon. This is suggested way for providing
+  resource identifiers.
+
+
+Example usage:
+
+.. code-block:: python
+
+    db = SomeDBInterface()
+    api = application = falcon.API()
+
+    class FooResource(RetrieveUpdateAPI):
+        serializer = RawSerializer()
+
+        def retrieve(self, params, meta, foo_id, **kwargs):
+            return db.Foo.get(id=foo_id)
+
+        def update(self, params, meta, foo_id, **kwargs):
+            return db.Foo.update(id=foo_id)
+
+        def delete(self, params, meta, **kwargs):
+            db.Foo.delete(id=foo_id)
+
+    # note url template param that will be passed to `FooResource.get_object()`
+    api.add_route('foo/{foo_id}', FooResource())
+
+
+ListAPI
+~~~~~~~
+
+:class:`ListAPI` represents list of resource instances. In 'content'
+section of GET response it will return list of serialized objects
+representations. On OPTIONS request it will return additional
+field named 'fields' that describes all serializer fields.
+
+
+It expects from you to implement ``.list(self, params, meta, **kwargs)``
+method handler that retrieves list (or any iterable) of objects
+(e.g. from some storage) that will be later serialized using provided
+serializer.
+
+``list()`` accepts following arguments:
+
+* **params** *(dict)*: dictionary of parsed parameters accordingly
+  to definitions provided as resource class atributes.
+* **meta** *(dict)*: dictionary of meta parameters anything added
+  to this dict will will be later included in response
+  'meta' section. This can already prepopulated by method
+  that calls this handler.
+* **kwargs** *(dict)*: dictionary of values retrieved from route url
+  template by falcon. This is suggested way for providing
+  resource identifiers.
 
 Example usage:
 
@@ -132,7 +231,7 @@ Example usage:
     class FooListResource(ListAPIResource):
         serializer = RawSerializer()
 
-        def get_list(self, params, meta, **kwargs):
+        def list(self, params, meta, **kwargs):
             return db.Foo.all(id=foo_id)
 
     # note that in most cases there is no need do define
@@ -140,52 +239,121 @@ Example usage:
     api.add_route('foo/', FooListResource())
 
 
-PaginatedListResource
-~~~~~~~~~~~~~~~~~~~~~
+ListCreateAPI
+~~~~~~~~~~~~~
 
-:class:`PaginatedListResource` represents list of resource instances in the
-same way as ``ListAPIResource`` (same handlers) but adds two new parameters:
+:class:`ListCreateAPI` extends :class:`ListAPI` with capability to
+create new objects with data from resource representation provided in
+POST request body.
 
-* ``page_size`` - size of a single response page
-* ``page`` - page count
+It expects from you to implement same handlers as for :class:`ListAPI`
+and also new ``.create(self, params, meta, validated, **kwargs)`` method handler
+that creates single object (e.g. in some storage). Created object may or may
+not be returned in response 'content' section (this is optional)
 
-It also includes some additional pagination information in response meta
-section:
+``create()`` accepts following arguments:
 
-* ``page_size``
-* ``page``
-* ``next`` - url query string for next page (only if meta['is_more'] exist)
-* ``prev`` - url query string for previous page (None if first page)
+* **params** *(dict)*: dictionary of parsed parameters accordingly
+  to definitions provided as resource class atributes.
+* **meta** *(dict)*: dictionary of meta parameters anything added
+  to this dict will will be later included in response
+  'meta' section. This can already prepopulated by method
+  that calls this handler.
+* **validated** *(dict)*: dictionary of internal object fields values
+  after converting from representation with full validation performed
+  accordingly to definition contained within serializer instance.
+* **kwargs** *(dict)*: dictionary of values retrieved from route url
+  template by falcon. This is suggested way for providing
+  resource identifiers.
 
-If you don't like this little opinionated meta, you can override it with
-``.add_pagination_meta(params, meta)`` method handler.
+If ``create()`` will return any value it should have same form as return value
+of ``retrieve()`` because it will be again translated into representation
+with serializer.
 
-
-``PaginatedListResource``  does not assume anything about your resources so
-actual pagination must still be implemented. Anyway this class allows you to
-manage params and meta for pagination in consistent way across all of your
-resources:
+Example usage:
 
 .. code-block:: python
 
     db = SomeDBInterface()
     api = application = falcon.API()
 
-    class FooPaginatedResource(PaginatedListAPIResource):
+    class FooListResource(ListAPIResource):
         serializer = RawSerializer()
 
-        def get_list(self, params, meta, **kwargs):
+        def list(self, params, meta, **kwargs):
+            return db.Foo.all(id=foo_id)
+
+        def create(self, params, meta, validated, **kwargs):
+            return db.Foo.create(**validated)
+
+    # note that in most cases there is no need do define
+    # variables in url template for list type of resources
+    api.add_route('foo/', FooListResource())
+
+
+Paginated generic resources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`PaginatedListAPI` and :class:`PaginatedListCreateAPI` are versions
+of respecrively :class:`ListAPI` and :class:`ListAPI` classes that supply
+with simple pagination build with following parameters:
+
+* **page_size**: size of a single response page
+* **page**: page count
+
+They also will 'meta' section with following information on GET requests:
+
+* ``page_size``
+* ``page``
+* ``next`` - url query string for next page (only if ``meta['is_more']`` exists
+  and is ``True``)
+* ``prev`` - url query string for previous page (``None`` if first page)
+
+Paginated variations of generic list resource do not assume anything about
+your resources so actual pagination must still be implemented inside of
+``list()`` handlers. Anyway this class allows you to manage params and meta
+for pagination in consistent way across all of your resources if you only
+decide to use it:
+
+.. code-block:: python
+
+    db = SomeDBInterface()
+    api = application = falcon.API()
+
+    class FooPaginatedResource(PaginatedListAPI):
+        serializer = RawSerializer()
+
+        def list(self, params, meta, **kwargs):
             query = db.Foo.all(id=foo_id).offset(
                 params['page'] * params['page_size']
             ).limit(
                 params['page_size']
             )
 
-            # use meta['has_more'] to find out if there are any pages behind
-            # this one
+            # use meta['has_more'] to find out if there are
+            # any pages behind this one
             if db.Foo.count() > (params['page'] + 1) * params['page_size']:
                 meta['has_more'] = True
 
             return query
 
     api.add_route('foo/', FooPaginatedtResource())
+
+
+.. note::
+
+    If you don't like anything about little opinionated meta that paginated
+    generic resources provide you can olways override it with
+    ``.add_pagination_meta(params, meta)`` method handler.
+
+
+Generic resources without serialization
+---------------------------------------
+
+If you don't like how serializers work there are also two very basic generic
+resources that does not rely on serializers: :class:`Resource` and
+:class:`ListResource`. They can be extended with mixins found in
+:any:`graceful.resources.mixins` module and provide same method handlers like
+generic resources that utilize serializers (``list()``, ``retrieve()``,
+``update()`` etc.) but do not perform anything more beyond content-type level
+serialization.

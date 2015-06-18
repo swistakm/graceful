@@ -4,7 +4,7 @@ import falcon
 from graceful.serializers import BaseSerializer
 from graceful.fields import IntField, RawField
 from graceful.parameters import StringParam
-from graceful.validators import ValidationError
+from graceful.errors import ValidationError
 from graceful.resources.generic import (
     RetrieveUpdateDeleteAPI,
     PaginatedListCreateAPI,

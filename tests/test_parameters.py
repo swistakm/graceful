@@ -4,11 +4,9 @@ import base64
 
 import pytest
 
-import urllib.parse
 from graceful.parameters import (
     BaseParam,
     StringParam,
-    UrlEncodedParam,
     Base64EncodedParam,
     IntParam,
     FloatParam,
@@ -73,13 +71,6 @@ def test_param_default_value():
 def test_string_param():
     param = StringParam(details="stringy stringy")
     assert param.value("foo") == "foo"
-
-
-def test_urlencoded_param():
-    param = UrlEncodedParam(details="encoded data")
-    value = "foo %4%^&32342- bar"
-
-    assert param.value(urllib.parse.quote(value)) == value
 
 
 def _test_param(param, encoded, invalid, desired):

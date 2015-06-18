@@ -7,7 +7,7 @@ from falcon import errors
 import falcon
 
 from graceful.parameters import BaseParam, IntParam
-from graceful.serializers import DeserializationError
+from graceful.errors import DeserializationError
 
 
 class MetaResource(type):
@@ -26,6 +26,11 @@ class MetaResource(type):
         Note: this is python3 thing and support for ordering of params in
         descriptions will not be backported to python2 even if this framework
         will get python2 support.
+
+        Args:
+            bases: all base classes of created resource class
+            namespace (dict): namespace as dictionary of attributes
+
         """
         return OrderedDict()
 
@@ -37,9 +42,9 @@ class MetaResource(type):
         params can be overriden.
 
         Args:
-
             bases: all base classes of created resource class
             namespace (dict): namespace as dictionary of attributes
+
         """
         params = [
             (name, namespace.pop(name))
@@ -66,7 +71,7 @@ class MetaResource(type):
         )
 
 
-class BaseAPIResource(object, metaclass=MetaResource):
+class BaseResource(object, metaclass=MetaResource):
     """
     Base Resouce class for handling resource responses, parameter
     deserialization and validation of request included representations if
@@ -88,6 +93,116 @@ class BaseAPIResource(object, metaclass=MetaResource):
         """
         return getattr(self, self.__class__._params_storage_key)
 
+    def make_body(self, resp, params, meta, content):
+        """
+        Make response body in ``resp`` object using JSON serialization
+
+        Args:
+            resp (falcon.Response): response object where to include
+               serialized body
+            params (dict): dictionary of parsed parameters
+            meta (dict): dictionary of metadata to be included in 'meta'
+               section of response
+            content (dict): dictionary of response content (resource
+               representation) to be included in 'content' section of response
+
+        Returns:
+            None
+
+        """
+        response = {
+            'meta': meta,
+            'content': content
+        }
+        resp.content_type = 'application/json'
+        resp.body = json.dumps(
+            response,
+            indent=params['indent'] or None if 'indent' in params else None
+        )
+
+    def allowed_methods(self):
+        """
+        Return list of allowed methods on this resource. This is only for
+        purpose of making resource description.
+
+        Returns:
+            list: list of allowed HTTP method names (uppercase)
+
+        """
+        return [
+            method
+            for method, allowed in (
+                ('GET', hasattr(self, 'on_get')),
+                ('POST', hasattr(self, 'on_post')),
+                ('PUT', hasattr(self, 'on_put')),
+                ('DELETE', hasattr(self, 'on_delete')),
+                ('HEAD', hasattr(self, 'on_head')),
+                ('OPTIONS', hasattr(self, 'on_options')),
+            ) if allowed
+        ]
+
+    def describe(self, req, resp, **kwargs):
+        """
+        Describe API resource using class introspection, self-describing
+        serializer and current request object (for resource guessing path)
+
+        Additional description on derrived resource class can be added using
+        keyword arguments and calling super().decribe() method call
+        like following:
+
+        .. code-block:: python
+
+             class SomeResource(BaseResource):
+                 def describe(req, resp, **kwargs):
+                     return super(SomeResource, self).describe(
+                         req, resp, type='list', **kwargs
+                      )
+
+        Args:
+            req (falcon.Request): request object
+            resp (falcon.Response): response object
+            kwargs (dict): dictionary of values created from resource url
+               template
+
+        Returns:
+            dict: dictionary with resource descritpion information
+
+        """
+        description = {
+            'params': OrderedDict([
+                (name, param.describe())
+                for name, param in self.params.items()
+            ]),
+            'details':
+                inspect.cleandoc(
+                    self.__class__.__doc__ or
+                    "This resource does not have description yet"
+                ),
+            'path': req.path,
+            'name': self.__class__.__name__,
+            'methods': self.allowed_methods()
+        }
+        description.update(**kwargs)
+        return description
+
+    def on_options(self, req, resp, **kwargs):
+        """
+        Respond with JSON formatted resource description.
+
+        Args:
+            req (falcon.Request): request object
+            resp (falcon.Response): response object
+            kwargs (dict): dictionary of values created by falcon from
+               resource url template
+
+
+        Returns:
+            None
+
+        """
+        resp.body = json.dumps(self.describe(req, resp))
+        resp.content_type = 'application/json'
+
     def require_params(self, req):
         """
         Require all parameters from request that are defined for this resource.
@@ -97,7 +212,6 @@ class BaseAPIResource(object, metaclass=MetaResource):
         of parameters could not be understood (wrong format).
 
         Args:
-
             req (falcon.Request): request object
 
         """
@@ -133,42 +247,12 @@ class BaseAPIResource(object, metaclass=MetaResource):
 
         return params
 
-    def make_body(self, resp, params, meta, content):
-        """
-        Make response body in ``resp`` object using JSON serialization
-
-        Args:
-
-            resp (falcon.Response): response object where to include
-               serialized body
-            params (dict): dictionary of parsed parameters
-            meta (dict): dictionary of metadata to be included in 'meta'
-               section of response
-            content (dict): dictionary of response content (resource
-               representation) to be included in 'content' section of response
-
-        Returns:
-
-            None
-
-        """
-        response = {
-            'meta': meta,
-            'content': content
-        }
-        resp.content_type = 'application/json'
-        resp.body = json.dumps(
-            response,
-            indent=params['indent'] or None if 'indent' in params else None
-        )
-
     def require_meta_and_content(self, content_handler, params, **kwargs):
         """
         Require 'meta' and 'content' dictionaries using given
         ``content_handler``.
 
         Args:
-
             content_handler (callable): function that accepts
                ``params, meta, **kwargs`` argument and returns dictionary
                for ``content`` response section
@@ -177,9 +261,8 @@ class BaseAPIResource(object, metaclass=MetaResource):
                template
 
         Returns:
-
-            tuple: (meta, content) two-tuple with dictionaries of ``meta`` and
-              ``content`` response sections
+            tuple (meta, content): two-tuple with dictionaries of ``meta`` and
+            ``content`` response sections
 
         """
         meta = {
@@ -189,107 +272,15 @@ class BaseAPIResource(object, metaclass=MetaResource):
         meta['params'] = params
         return meta, content
 
-    def allowed_methods(self):
-        """
-        Return list of allowed methods on this resource. This is only for
-        purpose of making resource description.
-
-        Returns:
-
-            list: list of allowed HTTP method names (uppercase)
-        """
-        return [
-            method
-            for method, allowed in (
-                ('GET', hasattr(self, 'on_get')),
-                ('POST', hasattr(self, 'on_post')),
-                ('PUT', hasattr(self, 'on_put')),
-                ('DELETE', hasattr(self, 'on_delete')),
-                ('HEAD', hasattr(self, 'on_head')),
-                ('OPTIONS', hasattr(self, 'on_options')),
-            ) if allowed
-        ]
-
-    def describe(self, req, resp, **kwargs):
-        """
-        Describe API resource using class introspection, self-describing
-        serializer and current request object (for resource guessing path)
-
-        Additional description on derrived resource class can be added using
-        keyword arguments and calling super().decribe() method call
-        like following:
-
-        .. code-block:: python
-
-             class SomeResource(BaseAPIResource):
-                 def describe(req, resp, **kwargs):
-                     return super(SomeResource, self).describe(
-                         req, resp, type='list', **kwargs
-                      )
-
-        Args:
-
-            req (falcon.Request): request object
-            resp (falcon.Response): response object
-            kwargs (dict): dictionary of values created from resource url
-               template
-
-        Returns:
-
-            dict: dictionary with resource descritpion information
-        """
-        description = {
-            'params': OrderedDict([
-                (name, param.describe())
-                for name, param in self.params.items()
-            ]),
-            'details':
-                inspect.cleandoc(
-                    self.__class__.__doc__ or
-                    "This resource does not have description yet"
-                ),
-            'path': req.path,
-            'name': self.__class__.__name__,
-            'methods': self.allowed_methods()
-        }
-        description.update(**kwargs)
-        return description
-
-    def on_options(self, req, resp, **kwargs):
-        """
-        Respond with JSON formatted resource description.
-
-        Note: accepting additional **kwargs is necessary to be able to respond
-            to OPTIONS requests if resource is routed in falcon with url
-            template
-
-        Args:
-
-            req (falcon.Request): request object
-            resp (falcon.Response): response object
-            kwargs (dict): dictionary of values created from resource url
-               template
-
-
-        Returns:
-
-            None
-
-        """
-        resp.body = json.dumps(self.describe(req, resp))
-        resp.content_type = 'application/json'
-
     def require_representation(self, req):
         """
         Require raw representation from falcon request object. This does not
         perform any field parsing or validation.
 
         Args:
-
             req (falcon.Request): request object
 
         Returns:
-
             dict: raw dictionary of representation supplied in request body
 
         """
@@ -308,16 +299,14 @@ class BaseAPIResource(object, metaclass=MetaResource):
         sent in request body.
 
         Args:
-
             req (falcon.Request): request object
             partial (bool): self to True if partially complete representation
                is accepted (e.g. for patching instead of full update). Missing
                fields in representation will be skiped.
 
         Returns:
-
             dict: dictionary of fields and values representing internal object.
-               Each value is a result of ``field.from_representation`` call.
+            Each value is a result of ``field.from_representation`` call.
 
         """
 

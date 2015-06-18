@@ -3,6 +3,63 @@ from graceful.validators import min_validator, max_validator
 
 
 class BaseField(object):
+    """
+    Base field class for subclassing. To create new field type
+    subclass `BaseField` and implement following methods:
+
+    - ``from_representation()``: converts representation (used in
+      request/response body) to internal value.
+
+    - ``to_representation()``: converts internal value to representation
+      that will be used in response body.
+
+
+    Args:
+
+        details (str): human readable description of field (it will be used
+           for describing resource on OPTIONS requests).
+
+        label (str): human readable label of a field (it will be used for
+           describing resource on OPTIONS requests).
+
+           *Note: it is recommended to use field names that are
+           self-explanatory intead of relying on field labels.*
+
+        source (str): name of internal object key/attribute that will be
+           passed to field on ``.to_representation()`` call. Special ``'*'``
+           value is allowed that will pass whole object to field when making
+           representation. If not set then default source will
+           be a field name used as a serializer's attribute.
+
+        validators (list): list of validator callables.
+
+        many (bool): set to True if field is in fact a list of given type
+          objects
+
+        read_only (bool): True if field is read only and cannot be set/modified
+           by POST and PUT requests
+
+    Example:
+
+    .. code-block:: python
+
+        class BoolField(BaseField):
+            def from_representation(self, data):
+                if data in {'true', 'True', 'yes', '1', 'Y'}:
+                    return True:
+                elif data in {'false', 'False', 'no', '0', 'N'}:
+                    return False:
+                else:
+                    raise ValueError(
+                        "{data} is not valid boolean field".format(
+                            data=data
+                        )
+                    )
+
+            def to_representation(self, value):
+                return ["True", "False"][value]
+
+    """
     spec = None
     type = None
 
@@ -15,48 +72,7 @@ class BaseField(object):
             many=False,
             read_only=False,
     ):
-        """
-        Base field class for subclassing. To create new field type
-        subclass `BaseField` and implement following methods:
 
-        * `from_representation()` - converts representation (used in
-            request/response body) to internal value.
-        * `to_representation()` - converts internal value to representation
-           that will be used in response body.
-
-        Example:
-
-            class BoolField(BaseField):
-                def from_representation(self, data):
-                    if data in {'true', 'True', 'yes', '1', 'Y'}:
-                        return True:
-                    elif data in {'false', 'False', 'no', '0', 'N'}:
-                        return False:
-                    else:
-                        raise ValueError(
-                            "{data} is not valid boolean field".format(
-                                data=data
-                            )
-                        )
-
-                def to_representation(self, value):
-                    return ["True", "False"][value]
-
-        :param details: human readable description of field (it will be used
-            for describing resource on OPTIONS requests).
-        :param label: human readable label of a field (it will be used for
-            describing resource on OPTIONS requests).
-            Note: it is recommended to use field names that are
-            self-explanatory intead of relying on field labels.
-        :param source: name of internal object key/attribute that will be
-            passed to field on ``.to_representation()`` call. Special ``'*'``
-            value is allowed that will pass whole object to field.
-        :param validators: list of validator callables.
-        :param many: set to True if field is in fact a list of given type
-           objects
-        :param read_only: True if field is read only and cannot be set/modified
-           by ``POST`` and ``PUT`` requests
-        """
         self.label = label
         self.source = source
         self.details = details
@@ -80,21 +96,25 @@ class BaseField(object):
 
     def describe(self, **kwargs):
         """
-        Describe serializer field for purpose of self documentation.
+        Describe this field instance for purpose of self-documentation.
 
-        Additional description on derrived resource class can be added using
-        keyword arguments and calling super().decribe() method call
-        like following:
+        Args:
+            kwargs (dict): dictionary of additional description items for
+               extending default description
 
-             class SomeField(BaseField):
-                 def describe(self, **kwargs):
-                     return super(SomeField, self).describe(
-                         type='list', **kwargs
-                      )
+        Returns:
+            dict: dictionary of description items
 
-        :param kwargs: dict of additional parameters for extending field's
-            description
-        :return: dict
+        Suggested way for overriding description fields or extending it with
+        additional items is calling super class method with new/overriden
+        fields passed as keyword arguments like following:
+
+        .. code-block:: python
+
+            class DummyField(BaseField):
+               def description(self, **kwargs):
+                   super(DummyParam, self).describe(is_dummy=True, **kwargs)
+
         """
         description = {
             'label': self.label,
@@ -108,18 +128,44 @@ class BaseField(object):
 
     def validate(self, value):
         """ Perform validation on value by running all field validators.
-        Validator is a callable that accepts one positional argument and
-        raises "ValidationError" when validation does not succeed.
+        Single validator is a callable that accepts one positional argument
+        and raises "ValidationError" when validation fails.
 
-        :param value:
-        :return: None
+        Error message included in exception will be included in http error
+        response
+
+        Args:
+            value: internal value to validate
+
+        Returns:
+            None
+
+        Note:
+            Concept of validation for fields is understood here as a process
+            of checking if data of valid type (successfully parsed/processed by
+            ``.from_representation`` handler) does meet some other constraints
+            (lenght, bounds, unique, etc). Becasue of that this method is
+            always called with result of ``.from_representation()`` passed
+            as value.
+
         """
         for validator in self.validators:
             validator(value)
 
 
 class RawField(BaseField):
-    type = 'string'
+    """
+    Represents raw field subtype. Any value from resource object
+    will be returned as is without any conversion and no control
+    over serialized value type is provided. Can be used only with
+    very simple data types like int, float, str etc. but can eventually
+    cause problems if value provided in representation has type
+    that is not accepted in application.
+
+    Effect of using this can differ between various content-types.
+
+    """
+    type = 'raw'
 
     def from_representation(self, data):
         return data
@@ -128,7 +174,39 @@ class RawField(BaseField):
         return value
 
 
+class StringField(BaseField):
+    """
+    Represents string field subtype without any extensive validation.
+    """
+    type = 'raw'
+
+    def from_representation(self, data):
+        return str(data)
+
+    def to_representation(self, value):
+        return str(value)
+
+
 class BoolField(BaseField):
+    """
+    Represents boolean type of field. By default accepts a wide range of
+    incoming True/False representations:
+
+    * False: ``[False', 'false', 'FALSE', 'F', 'f' '0', 0, 0.0, False``
+    * True: ``['True', 'true', 'TRUE', 'T', 't', '1', 1, True]``
+
+    By default by as representations of internal object's value it returns
+    python's False/True values that will be later serialized to form that
+    is native for content-type of use.
+
+    This behavior can be changed using ``representations`` field argument.
+
+    Args:
+
+        representations (tuple): two-tuple with representations for
+           (False, True) values, that will be used instead of default values
+
+    """
     type = 'bool'
 
     _TRUE_VALUES = {'True', 'true', 'TRUE', 'T', 't', '1', 1, True}
@@ -169,6 +247,20 @@ class BoolField(BaseField):
 
 
 class IntField(BaseField):
+    """
+    Represents integer type of field. Accepts both integers and strings
+    as an incoming integer representation and always returns int as a
+    representation of internal objects's value that will be later
+    serialized to form that is native for content-type of use.
+
+    This field accepts optional arguments that simply add new `max` and `min`
+    value validation.
+
+    Args:
+        max_value (int): optional max value for validation
+        min_value (int): optional min value for validation
+
+    """
     type = 'int'
 
     def __init__(
@@ -178,14 +270,6 @@ class IntField(BaseField):
             min_value=None,
             **kwargs
     ):
-        """
-        :param max_value: max accepted value. Will cause ValidationError
-           exception when value greater than `max_value` passed during
-           validation
-        :param min_value: min accepted value. Will cause ValidationError
-           exception when value less than `min_value` passed during
-           validation
-        """
         super(IntField, self).__init__(details, **kwargs)
 
         self.max_value = max_value
@@ -204,6 +288,20 @@ class IntField(BaseField):
 
 
 class FloatField(BaseField):
+    """
+    Represents float type of field. Accepts both floats and strings
+    as an incoming float number representation and always returns float as a
+    representation of internal objects's value that will be later
+    serialized to form that is native for content-type of use.
+
+    This field accepts optional arguments that simply add new `max` and `min`
+    value validation.
+
+    Args:
+        max_value (int): optional max value for validation
+        min_value (int): optional min value for validation
+
+    """
     type = 'float'
 
     def __init__(
@@ -213,14 +311,6 @@ class FloatField(BaseField):
             min_value=None,
             **kwargs
     ):
-        """
-        :param max_value: max accepted value. Will cause ValidationError
-           exception when value greater than `max_value` passed during
-           validation
-        :param min_value: min accepted value. Will cause ValidationError
-           exception when value less than `min_value` passed during
-           validation
-        """
         super(FloatField, self).__init__(details, **kwargs)
 
         self.max_value = max_value

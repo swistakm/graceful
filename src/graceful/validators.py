@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import re
 
+from graceful.errors import ValidationError
+
+
 __all__ = [
     'min_validator',
     'max_validator',
@@ -8,11 +11,15 @@ __all__ = [
 ]
 
 
-class ValidationError(ValueError):
-    pass
-
-
 def min_validator(min_value):
+    """
+    Return validator function that will check internal value with
+    ``value >= min_value`` check
+
+    Args:
+        min_value: minimal value for new validator
+
+    """
     def validator(value):
         if value < min_value:
             raise ValidationError("{} is not >= {}".format(value, min_value))
@@ -21,6 +28,13 @@ def min_validator(min_value):
 
 
 def max_validator(max_value):
+    """
+    Return validator function that will check if ``value >= min_value``.
+
+    Args:
+        max_value: maximum value for new validator
+
+    """
     def validator(value):
         if value > max_value:
             raise ValidationError("{} is not <= {}".format(value, max_value))
@@ -29,6 +43,13 @@ def max_validator(max_value):
 
 
 def choices_validator(choices):
+    """
+    Return validator function that will check if ``value in choices``.
+
+    Args:
+        max_value (list, set, tuple): allowed choices for new validator
+
+    """
     def validator(value):
         if value not in choices:
             # note: make it a list for consistent representation
@@ -39,12 +60,23 @@ def choices_validator(choices):
     return validator
 
 
-def match_validator(match):
-    if isinstance(match, str):
-        compiled = re.compile(match)
-    elif hasattr(match, 'match'):
+def match_validator(expression):
+    """
+    Return validator function that will check if matches given match.
+
+    Args:
+        match: if string then this will be converted to regular expression
+           using ``re.compile``. Can be also any object that has ``match()`
+           method like already compiled regular regular expression or custom
+           matching object/class.
+
+    """
+
+    if isinstance(expression, str):
+        compiled = re.compile(expression)
+    elif hasattr(expression, 'match'):
         # check it early so we could say something is wrong early
-        compiled = match
+        compiled = expression
     else:
         raise TypeError(
             'Provided match is nor a string nor has a match method '

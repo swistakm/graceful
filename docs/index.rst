@@ -13,8 +13,6 @@ Contents:
 
 .. include:: readme.rst
 
-.. include::
-
 
 Indices and tables
 ==================

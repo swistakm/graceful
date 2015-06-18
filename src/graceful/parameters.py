@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import urllib.parse
 import base64
 import decimal
 import binascii
@@ -7,6 +6,57 @@ import inspect
 
 
 class BaseParam():
+    """
+    Base parameter class for subclassing. To create new parameter type
+    subclass ``BaseField`` and implement following methods:
+
+    To create new field type subclass ``BaseParam`` and implement ``.value()``
+    method handlers.
+
+
+    Args:
+
+        details (str): verbose description of parameter. Should contain all
+           information that may be important to your API user and will be used
+           for describing resource on ``OPTIONS`` requests and ``.describe()``
+           call.
+
+        label (str): human readable label for this parameter (it will be used
+           for describing resource on OPTIONS requests).
+
+           *Note that it is recomended to use parameter names that are
+           self-explanatory intead of relying on param labels.*
+
+        required (bool): if set to ``True`` then all GET, POST, PUT,
+           PATCH and DELETE requests will return ``400 Bad Request`` response
+           if query param is not provided.
+
+        default (str): set default value for param if it is not
+           provided in request as query parameter. This MUST be a raw string
+           value that will be then parsed by ``.value()`` handler.
+
+           If default is set and ``required`` is ``True`` it will raise
+           ``ValueError`` as having required parameters with default
+           value has no sense.
+
+    Example:
+
+    .. code-block:: python
+
+           class BoolParam(BaseParam):
+               def value(self, data):
+                   if data in {'true', 'True', 'yes', '1', 'Y'}:
+                       return True:
+                   elif data in {'false', 'False', 'no', '0', 'N'}:
+                       return False:
+                   else:
+                       raise ValueError(
+                           "{data} is not valid boolean field".format(
+                               data=data
+                           )
+                       )
+
+    """
     spec = None
     type = None
 
@@ -17,43 +67,6 @@ class BaseParam():
             required=False,
             default=None,
     ):
-        """
-        Base parameter class for subclassing. To create new parameter type
-        subclass `BaseField` and implement following methods:
-
-        To create new field type subclass `BaseParam` and implement following
-        methods:
-
-        * `value()`
-
-        Example:
-
-            class BoolParam(BaseParam):
-                def value(self, data):
-                    if data in {'true', 'True', 'yes', '1', 'Y'}:
-                        return True:
-                    elif data in {'false', 'False', 'no', '0', 'N'}:
-                        return False:
-                    else:
-                        raise ValueError(
-                            "{data} is not valid boolean field".format(
-                                data=data
-                            )
-                        )
-
-        :param details: detailed description of parameter (it will be used for
-            describing resource on OPTIONS requests).
-        :param label: human readable label for this parameter (it will be used
-            for describing resource on OPTIONS requests).
-             Note: it is recommended to use parameter names that are
-            self-explanatory intead of relying on param labels.
-        :param required: if this parameter is required. If set to true
-            then requests without parameter will raise BadRequest exception
-        :param default: default value when this parameter is not specified.
-            note: this needs to be a raw value since it will be also used to
-            describe API resource.
-        :return:
-        """
         self.label = label
         self.details = details
         self.required = required
@@ -77,6 +90,13 @@ class BaseParam():
         self.default = default
 
     def value(self, raw_value):
+        """
+        Raw value deserializtion method handler
+
+        Args:
+            raw_value (str) - raw value from GET parameters
+
+        """
         raise NotImplementedError(
             "{cls}.value() method not implemented".format(
                 cls=self.__class__.__name__
@@ -84,6 +104,29 @@ class BaseParam():
         )
 
     def describe(self, **kwargs):
+        """
+        Describe this parameter instance for purpose of self-documentation.
+
+        Args:
+            kwargs (dict): dictionary of additional description items for
+               extending default description
+
+        Returns:
+            dict: dictionary of description items
+
+
+        Suggested way for overriding description fields or extending it with
+        additional items is calling super class method with new/overriden
+        fields passed as keyword arguments like following:
+
+        .. code-block:: python
+
+            class DummyParam(BaseParam):
+               def description(self, **kwargs):
+                   super(DummyParam, self).describe(is_dummy=True, **kwargs)
+
+        """
+
         description = {
             'label': self.label,
             # note: details are expected to be large so it should
@@ -100,26 +143,35 @@ class BaseParam():
 
 
 class StringParam(BaseParam):
+    """
+    Describes parameter that will always be returned in same form as provided
+    in query string. Still additional validation can be added to param instance
+    e.g.:
+
+    .. code-block:: python
+
+        from graceful.parameters import StringParam
+        from graceful.validators import match_validator
+        from graceful.resources.generic import Resource
+
+        class ExampleResource(Resource):
+            word = StringParam(
+                'one "word" parameter',
+                validators=[match_validator('\w+')],
+            )
+
+    """
     type = 'string'
 
     def value(self, raw_value):
-        """Returns value as-is"""
+        """Returns value as-is (str)"""
         return raw_value
 
 
-class UrlEncodedParam(BaseParam):
-    type = 'percent-encoded string'
-    spec = (
-        "RFC-3968 Section 2.1",
-        "https://tools.ietf.org/html/rfc3986#section-2.1",
-    )
-
-    def value(self, raw_value):
-        """Decodes url encoded param"""
-        return urllib.parse.unquote(raw_value)
-
-
 class Base64EncodedParam(BaseParam):
+    """
+    Describes string parameter that has value encoded using Base64 encoding
+    """
     spec = (
         "RFC-4648 Section 4",
         "https://tools.ietf.org/html/rfc4648#section-4",
@@ -134,6 +186,9 @@ class Base64EncodedParam(BaseParam):
 
 
 class IntParam(BaseParam):
+    """
+    Describes parameter that has value expressed as integer number
+    """
     type = "integer"
 
     def value(self, raw_value):
@@ -142,6 +197,9 @@ class IntParam(BaseParam):
 
 
 class FloatParam(BaseParam):
+    """
+    Describes parameter that has value expressed as float number
+    """
     type = "float"
 
     def value(self, raw_value):
@@ -150,6 +208,9 @@ class FloatParam(BaseParam):
 
 
 class DecimalParam(BaseParam):
+    """
+    Describes parameter that has value expressed as decimal number
+    """
     type = "decimal"
 
     def value(self, raw_value):

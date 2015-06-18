@@ -2,48 +2,8 @@
 from collections import OrderedDict
 from collections.abc import Mapping, MutableMapping
 
-from falcon.errors import HTTPBadRequest
-
+from graceful.errors import DeserializationError, ValidationError
 from graceful.fields import BaseField
-from graceful.validators import ValidationError
-
-
-class DeserializationError(ValueError):
-    """
-    Raised when error happened during deserialization of object
-    """
-    def __init__(
-            self, missing=None, forbidden=None, invalid=None, failed=None
-    ):
-        self.missing = missing
-        self.forbidden = forbidden
-        self.invalid = invalid
-        self.failed = failed
-
-    def as_bad_request(self):
-        return HTTPBadRequest(
-            title="Representation deserialization failed",
-            description=self._get_description()
-        )
-
-    def _get_description(self):
-        """ Return human readable description that explains everything that
-        went wrong with deserialization.
-        """
-        return ", ".join([
-            part for part in [
-                "missing: {}".format(self.missing) if self.missing else "",
-                (
-                    "forbidden: {}".format(self.forbidden)
-                    if self.forbidden else ""
-                ),
-                "invalid: {}:".format(self.invalid) if self.invalid else "",
-                (
-                    "failed to parse: {}".format(self.failed)
-                    if self.failed else ""
-                )
-            ] if part
-        ])
 
 
 class MetaSerializer(type):
@@ -62,6 +22,7 @@ class MetaSerializer(type):
         Note: this is python3 thing and support for ordering of params in
         descriptions will not be backported to python2 even if this framework
         will get python2 support.
+
         """
         return OrderedDict()
 
@@ -72,8 +33,10 @@ class MetaSerializer(type):
         Also collect all fields from base classes in order that ensures
         fields can be overriden.
 
-        :param bases: all base classes of created serializer class
-        :param namespace: namespace as dictionary of attributes
+        Args:
+            bases: all base classes of created serializer class
+            namespace (dict): namespace as dictionary of attributes
+
         """
         fields = [
             (name, namespace.pop(name))
@@ -100,11 +63,48 @@ class MetaSerializer(type):
 
 
 class BaseSerializer(object, metaclass=MetaSerializer):
+    """
+    Base serializer class for describing internal object serialization
+
+    Example:
+
+    .. code-block:: python
+
+        from graceful.serializers import BaseSerializer
+        from graceful.fields import RawField, IntField, FloatField
+
+
+        class CatSerializer(BaseSerializer):
+            species = RawField("non normalized cat species")
+            age = IntField("cat age in years")
+            height = FloatField("cat height in cm")
+
+    """
+
     @property
     def fields(self):
+        """
+        Dictionary of field objects defined for this resource serialization
+        """
         return getattr(self, self.__class__._fields_storage_key)
 
     def to_representation(self, obj):
+        """
+        Convert given internal object instance into defined representation
+        that will be later serialized to content-type of use in resource
+        http method handler.
+
+        This loops over all fields and retrieves source keys/attributes as
+        field values with respect to optional field sources and converts each
+        one using ``field.to_representation()`` method.
+
+        Args:
+            obj (object): internal object that needs to be represented
+
+        Returns:
+            dict: representation dictionary
+
+        """
         representation = {}
 
         for name, field in self.fields.items():
@@ -125,6 +125,30 @@ class BaseSerializer(object, metaclass=MetaSerializer):
         return representation
 
     def from_representation(self, representation):
+        """
+        Convert given representation dict into dictionary of internal object
+        values with respect to field sources.
+
+        This does not check if all required fields exist or values are
+        valid in terms of value validation
+        (see: :meth:`BaseField.validate()`) but still requires all of passed
+        representation values to be well formed representation (success call
+        to ``field.from_representation``).
+
+        In case of malformed representation it will run additional validation
+        only to provide a full detailed exception about all that might be
+        wrong with provided representation.
+
+        Args:
+           representation (dict): dictionary with field representation values
+
+        Raises:
+            DeserializationError: when at least one representation field
+               is not formed as expected by field object. Information
+               about additional forbidden/missing/invalid fields is provided
+               as well.
+
+        """
         object_dict = {}
         failed = {}
 
@@ -156,26 +180,51 @@ class BaseSerializer(object, metaclass=MetaSerializer):
 
         return object_dict
 
-    def validate(self, obj, partial=False):
+    def validate(self, object_dict, partial=False):
+        """
+        Validate given internal object agains missing/forbidden/invalid
+        fields values using fields definitions defined in serializer.
+
+        Args:
+            object_dict (dict): internal object dictionart to perform
+              to validate
+            partial (bool): if set to True then incomplete object_dict
+              is accepter and will not raise any exceptions when one
+              of fields is missing
+
+        Raises:
+            DeserializationError:
+
+        """
+
+        # we are working on object_dict not an representation so there
+        # is a need to annotate sources differently
+        sources = {
+            # TODO: handling of '*' sources here is a bit terryfying
+            # TODO: maybe this needs more care in future releases
+            field.source or name if field.source != "*" else name: field
+            for name, field in self.fields.items()
+        }
+
         # note: we are checking for all mising and invalid fields so we can
         # return exception with all fields that are missing and should
         # exist instead of single one
         missing = [
-            name for name, field in self.fields.items()
-            if not partial and name not in obj and not field.read_only
+            name for name, field in sources.items()
+            if all((not partial, name not in object_dict, not field.read_only))
         ]
 
         forbidden = [
-            field for field in obj
-            if field not in self.fields or self.fields[field].read_only
+            name for name in object_dict
+            if any((name not in sources, sources[name].read_only))
         ]
 
         invalid = {}
-        for field_name, value in obj.items():
+        for name, value in object_dict.items():
             try:
-                self.fields[field_name].validate(value)
+                sources[name].validate(value)
             except ValidationError as err:
-                invalid[field_name] = str(err)
+                invalid[name] = str(err)
 
         if any([missing, forbidden, invalid]):
             raise DeserializationError(missing, forbidden, invalid)
@@ -185,10 +234,14 @@ class BaseSerializer(object, metaclass=MetaSerializer):
         Get attribute from given object instance where 'attribute' can
         be also a key from object if is a dict or any kind of mapping
 
-        note: it will return None if attribute key does not exist
+        Note: it will return None if attribute key does not exist
 
-        :param obj: object to retrieve data
-        :return:
+        Args:
+            obj (object): internal object to retrieve data from
+
+        Returns:
+            internal object's key value or attribute
+
         """
         # '*' is a special wildcard character that means whole object
         # is passed
@@ -204,12 +257,13 @@ class BaseSerializer(object, metaclass=MetaSerializer):
     def set_attribute(self, obj, attr, value):
         """
         Set attribute in given object instance where 'attribute' can
-        be also a key from object if is a dict or any kind of mapping
+        be also a key from object if it is a dict or any kind of mapping
 
-        :param obj: object instance to modify
-        :param attr: attribute (or key) to change
-        :param value: value
-        :return:
+        Args:
+            obj (object): object instance to modify
+            attr (str): attribute (or key) to change
+            value: value to set
+
         """
         # if this is any mutable mapping then instead of attributes use keys
         if isinstance(obj, MutableMapping):
@@ -218,6 +272,15 @@ class BaseSerializer(object, metaclass=MetaSerializer):
             setattr(obj, attr, value)
 
     def describe(self):
+        """
+        Describe whole all fields defined for this serializer using their own
+        descriptions with respect to order in which they are defined as class
+        attributes.
+
+        Returns:
+            OrderedDict: serializer description
+
+        """
         return OrderedDict([
             (name, field.describe())
             for name, field in self.fields.items()

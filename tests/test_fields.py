@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+from graceful.errors import ValidationError
 
 from graceful.fields import (
     BaseField,
     RawField,
+    StringField,
     IntField,
     FloatField,
-    BoolField
+    BoolField,
 )
-from graceful import validators
 
 
 def test_base_field_implementation_hooks():
@@ -46,14 +47,14 @@ def test_base_field_validate():
         pass
 
     def always_raise_validator(value):
-        raise validators.ValidationError("Just because!")
+        raise ValidationError("Just because!")
 
     # here there is no chance to validate
     field_with_picky_validation = BaseField(
         "test base field validators",
         validators=[always_pass_validator, always_raise_validator]
     )
-    with pytest.raises(validators.ValidationError):
+    with pytest.raises(ValidationError):
         field_with_picky_validation.validate("foo")
 
     # here will validate because of very indulgent validation
@@ -84,6 +85,16 @@ def test_raw_field(data_type):
     assert instance == recreated
 
 
+def test_string_field():
+    field = StringField("test str field")
+
+    assert field.to_representation("foo") == "foo"
+    assert field.to_representation(123) == "123"
+
+    assert field.from_representation("foo") == "foo"
+    assert field.from_representation(123) == "123"
+
+
 def test_int_field():
     field = IntField("test int field", max_value=100, min_value=0)
 
@@ -109,9 +120,9 @@ def test_int_field():
         field.from_representation('foo')
 
     # test validation
-    with pytest.raises(validators.ValidationError):
+    with pytest.raises(ValidationError):
         field.validate(-10)
-    with pytest.raises(validators.ValidationError):
+    with pytest.raises(ValidationError):
         field.validate(123)
 
 
@@ -161,7 +172,7 @@ def test_float_field():
         field.from_representation('foo')
 
     # check validation
-    with pytest.raises(validators.ValidationError):
+    with pytest.raises(ValidationError):
         field.validate(-10)
-    with pytest.raises(validators.ValidationError):
+    with pytest.raises(ValidationError):
         field.validate(123)
