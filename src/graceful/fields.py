@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import inspect
+
 from graceful.validators import min_validator, max_validator
 
 
@@ -118,7 +120,7 @@ class BaseField(object):
         """
         description = {
             'label': self.label,
-            'details': self.details,
+            'details': inspect.cleandoc(self.details),
             'type': "list of {}".format(self.type) if self.many else self.type,
             'spec': self.spec,
             'read_only': self.read_only,
