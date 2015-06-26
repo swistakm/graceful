@@ -32,9 +32,11 @@ python2 compatibile although it would be pretty straightforward do do so with
 existing tools (like six).
 
 # usage
-Here will be presented very simple example of working API made with
-``graceful``. For extended tutorial and more information please refer to
-documentation.
+For extended tutorial and more information please refer to
+[guide](http://graceful.readthedocs.org/en/latest/guide/) included in
+documentation. 
+
+Anyway here is simple example of working API made made with `graceful`:
 
 ```python
 import falcon
@@ -105,7 +107,12 @@ api.add_route("/v1/cats/{cat_id}", Cat())
 api.add_route("/v1/cats/", CatList())
 ```
 
-Now you're ready to query it (here with awesome [hhtpie](http://httpie.org) 
+Assume this code is in python module named `example.py`.
+Now run it with [gunicorn](https://github.com/benoitc/gunicorn):
+
+    gunicorn -b localhost:8888 example
+
+And you're ready to query it (here with awesome [hhtpie](http://httpie.org)
 tool):
 
 ```
