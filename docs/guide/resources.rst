@@ -68,13 +68,13 @@ be later serialized using provided serializer.
 
 ``retrieve()`` accepts following arguments:
 
-* **params** *(dict)*: dictionary of parsed parameters accordingly
+* **params** *(dict):* dictionary of parsed parameters accordingly
   to definitions provided as resource class atributes.
-* **meta** *(dict)*: dictionary of meta parameters anything added
+* **meta** *(dict):* dictionary of meta parameters anything added
   to this dict will will be later included in response
   'meta' section. This can already prepopulated by method
   that calls this handler.
-* **kwargs** *(dict)*: dictionary of values retrieved from route url
+* **kwargs** *(dict):* dictionary of values retrieved from route url
   template by falcon. This is suggested way for providing
   resource identifiers.
 
@@ -111,16 +111,16 @@ not be returned in response 'content' section (this is optional)
 
 ``update()`` accepts following arguments:
 
-* **params** *(dict)*: dictionary of parsed parameters accordingly
+* **params** *(dict):* dictionary of parsed parameters accordingly
   to definitions provided as resource class atributes.
-* **meta** *(dict)*: dictionary of meta parameters anything added
+* **meta** *(dict):* dictionary of meta parameters anything added
   to this dict will will be later included in response
   'meta' section. This can already prepopulated by method
   that calls this handler.
-* **validated** *(dict)*: dictionary of internal object fields values
+* **validated** *(dict):* dictionary of internal object fields values
   after converting from representation with full validation performed
   accordingly to definition contained within serializer instance.
-* **kwargs** *(dict)*: dictionary of values retrieved from route url
+* **kwargs** *(dict):* dictionary of values retrieved from route url
   template by falcon. This is suggested way for providing
   resource identifiers.
 
@@ -161,13 +161,13 @@ that deletes single object (e.g. in some storage).
 
 ``delete()`` accepts following arguments:
 
-* **params** *(dict)*: dictionary of parsed parameters accordingly
+* **params** *(dict):* dictionary of parsed parameters accordingly
   to definitions provided as resource class atributes.
-* **meta** *(dict)*: dictionary of meta parameters anything added
+* **meta** *(dict):* dictionary of meta parameters anything added
   to this dict will will be later included in response
   'meta' section. This can already prepopulated by method
   that calls this handler.
-* **kwargs** *(dict)*: dictionary of values retrieved from route url
+* **kwargs** *(dict):* dictionary of values retrieved from route url
   template by falcon. This is suggested way for providing
   resource identifiers.
 
@@ -211,13 +211,13 @@ serializer.
 
 ``list()`` accepts following arguments:
 
-* **params** *(dict)*: dictionary of parsed parameters accordingly
+* **params** *(dict):* dictionary of parsed parameters accordingly
   to definitions provided as resource class atributes.
-* **meta** *(dict)*: dictionary of meta parameters anything added
+* **meta** *(dict):* dictionary of meta parameters anything added
   to this dict will will be later included in response
   'meta' section. This can already prepopulated by method
   that calls this handler.
-* **kwargs** *(dict)*: dictionary of values retrieved from route url
+* **kwargs** *(dict):* dictionary of values retrieved from route url
   template by falcon. This is suggested way for providing
   resource identifiers.
 
@@ -253,16 +253,16 @@ not be returned in response 'content' section (this is optional)
 
 ``create()`` accepts following arguments:
 
-* **params** *(dict)*: dictionary of parsed parameters accordingly
+* **params** *(dict):* dictionary of parsed parameters accordingly
   to definitions provided as resource class atributes.
-* **meta** *(dict)*: dictionary of meta parameters anything added
+* **meta** *(dict):* dictionary of meta parameters anything added
   to this dict will will be later included in response
   'meta' section. This can already prepopulated by method
   that calls this handler.
-* **validated** *(dict)*: dictionary of internal object fields values
+* **validated** *(dict):* dictionary of internal object fields values
   after converting from representation with full validation performed
   accordingly to definition contained within serializer instance.
-* **kwargs** *(dict)*: dictionary of values retrieved from route url
+* **kwargs** *(dict):* dictionary of values retrieved from route url
   template by falcon. This is suggested way for providing
   resource identifiers.
 
@@ -298,8 +298,8 @@ Paginated generic resources
 of respecrively :class:`ListAPI` and :class:`ListAPI` classes that supply
 with simple pagination build with following parameters:
 
-* **page_size**: size of a single response page
-* **page**: page count
+* **page_size:** size of a single response page
+* **page:** page count
 
 They also will 'meta' section with following information on GET requests:
 

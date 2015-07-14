@@ -99,21 +99,21 @@ Field arguments
 
 All field classes accept this set of arguments:
 
-* **details** *(str, required)*: verbose description of field.
+* **details** *(str, required):* verbose description of field.
 
-* **label** *(str, optional)*: human readable label for this
+* **label** *(str, optional):* human readable label for this
   field (it will be used for describing resource on OPTIONS requests).
 
   *Note that it is recomended to use field names that are self-explanatory
   intead of relying on param labels.*
 
-* **source** *(str, optional)*: name of internal object key/attribute
+* **source** *(str, optional):* name of internal object key/attribute
   that will be passed to field's on ``.to_representation(value)`` call.
   Special ``'*'`` value is allowed that will pass whole object to
   field when making representation. If not set then default source will
   be a field name used as a serializer's attribute.
 
-* **validators** *(list, optional)*: list of validator callables.
+* **validators** *(list, optional):* list of validator callables.
 
 * **many** *(bool, optional)* set to True if field is in fact a list
   of given type objects

@@ -18,22 +18,22 @@ New parameters are added to resources as class attributes:
 
 All param classes accept this set of arguments:
 
-- **details** *(str)*: verbose description of parameter. Should contain all
+- **details** *(str):* verbose description of parameter. Should contain all
   information that may be important to your API user and will be used for
   describing resource on ``OPTIONS`` requests and ``.describe()``
   call.
 
-- **label** *(str)*: human readable label for this parameter (it will be used for
+- **label** *(str):* human readable label for this parameter (it will be used for
   describing resource on OPTIONS requests).
 
   *Note that it is recomended to use parameter names that are self-explanatory
   intead of relying on param labels.*
 
-- **required** *(bool)*: if set to ``True`` then all GET, POST, PUT,
+- **required** *(bool):* if set to ``True`` then all GET, POST, PUT,
   PATCH and DELETE requests will return ``400 Bad Request`` response
   if query param is not provided.
 
-- **default** *(str)*: set default value for param if it is not
+- **default** *(str):* set default value for param if it is not
   provided in request as query parameter. This MUST be a raw string
   value that will be then parsed by ``.value()`` handler.
 
