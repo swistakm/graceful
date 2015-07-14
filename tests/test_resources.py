@@ -15,6 +15,7 @@ from graceful.parameters import StringParam, BaseParam
 from graceful.serializers import BaseSerializer
 from graceful.fields import StringField
 
+
 class TestResource(Resource):
     def retrieve(self, params, meta, **kwargs):
         return None
@@ -275,7 +276,7 @@ def test_default_parameters(req):
     assert 'bar' not in params
 
 
-def test_whole_serializer_validation_as_hhtp_bad_request(req):  # noqa
+def test_whole_serializer_validation_as_hhtp_bad_request(req):
 
     class TestSerializer(BaseSerializer):
         one = StringField("one different than two")
