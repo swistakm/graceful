@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import copy
 import json
+from collections.abc import Iterable
 
 from falcon.testing import create_environ
 from falcon import Request
@@ -202,7 +203,46 @@ def test_parameter_inheritance():
     assert resource.params['bar'].required is True
 
 
-def test_parameter_value_errors_translated_to_http_errors(req, resp):  # noqa
+def test_parameter_with_many_and_required():
+    class SomeResource(Resource):
+        foo = StringParam(details="give me foo", required=True, many=True)
+
+    env = create_environ(query_string="foo=bar&foo=baz")
+    resource = SomeResource()
+    params = resource.require_params(Request(env))
+
+    assert isinstance(params['foo'], Iterable)
+    assert set(params['foo']) == {'bar', 'baz'}
+
+
+def test_parameter_with_many_and_default(req):
+    class SomeResource(Resource):
+        foo = StringParam(details="give me foo", default='baz', many=True)
+
+    resource = SomeResource()
+    params = resource.require_params(req)
+
+    assert isinstance(params['foo'], Iterable)
+    assert params['foo'] == ['baz']
+
+    env = create_environ(query_string="foo=bar")
+    params = resource.require_params(Request(env))
+
+    assert isinstance(params['foo'], Iterable)
+    assert params['foo'] == ['bar']
+
+
+def test_parameter_with_many_unspecified(req):
+    class SomeResource(Resource):
+        foo = StringParam(details="give me foo", many=True)
+
+    resource = SomeResource()
+    params = resource.require_params(req)
+
+    assert 'foo' not in params
+
+
+def test_parameter_value_errors_translated_to_http_errors(req, resp):
     class InvalidParam(BaseParam):
         def value(self, raw_value):
             raise ValueError("some error")
