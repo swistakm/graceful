@@ -64,14 +64,14 @@ class MetaResource(type):
     def __new__(mcs, name, bases, namespace):
         namespace[mcs._params_storage_key] = mcs._get_params(bases, namespace)
 
-        return super(MetaResource, mcs).__new__(
+        return super().__new__(
             # note: there is no need preserve order in namespace anymore so
             # we convert it explicitely to dict
             mcs, name, bases, dict(namespace)
         )
 
 
-class BaseResource(object, metaclass=MetaResource):
+class BaseResource(metaclass=MetaResource):
     """
     Base Resouce class for handling resource responses, parameter
     deserialization and validation of request included representations if
@@ -154,7 +154,7 @@ class BaseResource(object, metaclass=MetaResource):
 
              class SomeResource(BaseResource):
                  def describe(req, resp, **kwargs):
-                     return super(SomeResource, self).describe(
+                     return super().describe(
                          req, resp, type='list', **kwargs
                       )
 
@@ -239,9 +239,22 @@ class BaseResource(object, metaclass=MetaResource):
                 # class can also return None from `.value()` method as a valid
                 # translated value.
                 try:
-                    params[name] = param.value(
-                        req.get_param(name, default=param.default)
-                    )
+                    if param.many:
+                        # params with "many" enabled need special care
+                        params[name] = req.get_param_as_list(
+                            name, param.value,
+                        ) or [
+                            param.default and param.value(param.default)
+                        ]
+                    else:
+                        # note that if many==False and query parameter
+                        # occurs multiple times in qs then it is
+                        # **unspecified** which one will be used. See:
+                        # http://falcon.readthedocs.org/en/latest/api/request_and_response.html#falcon.Request.get_param  # noqa
+                        params[name] = param.value(
+                            req.get_param(name, default=param.default)
+                        )
+
                 except ValueError as err:
                     raise errors.HTTPInvalidParam(str(err), name)
 

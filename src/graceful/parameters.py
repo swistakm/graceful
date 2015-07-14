@@ -29,7 +29,7 @@ class BaseParam():
 
         required (bool): if set to ``True`` then all GET, POST, PUT,
            PATCH and DELETE requests will return ``400 Bad Request`` response
-           if query param is not provided.
+           if query param is not provided. Defaults to ``False``.
 
         default (str): set default value for param if it is not
            provided in request as query parameter. This MUST be a raw string
@@ -38,6 +38,16 @@ class BaseParam():
            If default is set and ``required`` is ``True`` it will raise
            ``ValueError`` as having required parameters with default
            value has no sense.
+
+        param (str): set to ``True`` if multiple occurences of this parameter
+           can be included in query string, as a result values for this
+           parameter will be always included as a list in params dict. Defaults
+           to ``False``.
+
+          .. note::
+             If ``many=False`` and client inlcudes multiple values for this
+             parameter in query string then only one of those values will be
+             returned, and it is undefined which one.
 
     Example:
 
@@ -66,10 +76,12 @@ class BaseParam():
             label=None,
             required=False,
             default=None,
+            many=False,
     ):
         self.label = label
         self.details = details
         self.required = required
+        self.many = many
 
         if not (default is None) and not isinstance(default, str):
             raise TypeError(
@@ -123,7 +135,7 @@ class BaseParam():
 
             class DummyParam(BaseParam):
                def description(self, **kwargs):
-                   super(DummyParam, self).describe(is_dummy=True, **kwargs)
+                   super().describe(is_dummy=True, **kwargs)
 
         """
 
@@ -133,6 +145,7 @@ class BaseParam():
             #       be reformatted
             'details': inspect.cleandoc(self.details),
             'required': self.required,
+            'many': self.many,
             'spec': self.spec,
             'default': self.default,
             'type': self.type or 'unspecified'

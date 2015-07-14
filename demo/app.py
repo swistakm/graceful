@@ -36,7 +36,7 @@ class CatSerializer(BaseSerializer):
     breed = RawField("official breed name")
 
 
-class V1(object):
+class V1():
     class Cat(RetrieveUpdateDeleteAPI):
         """
         Single cat identified by its id

@@ -55,14 +55,14 @@ class MetaSerializer(type):
 
     def __new__(mcs, name, bases, namespace):
         namespace[mcs._fields_storage_key] = mcs._get_fields(bases, namespace)
-        return super(MetaSerializer, mcs).__new__(
+        return super().__new__(
             # note: there is no need preserve order in namespace anymore so
             # we convert it explicitely to dict
             mcs, name, bases, dict(namespace)
         )
 
 
-class BaseSerializer(object, metaclass=MetaSerializer):
+class BaseSerializer(metaclass=MetaSerializer):
     """
     Base serializer class for describing internal object serialization
 
