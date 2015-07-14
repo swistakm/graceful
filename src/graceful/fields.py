@@ -180,7 +180,7 @@ class StringField(BaseField):
     """
     Represents string field subtype without any extensive validation.
     """
-    type = 'raw'
+    type = 'string'
 
     def from_representation(self, data):
         return str(data)
