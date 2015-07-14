@@ -44,3 +44,8 @@ class DeserializationError(ValueError):
 
 class ValidationError(ValueError):
     """Raised when validation error occured"""
+    def as_bad_request(self):
+        return HTTPBadRequest(
+            title="Validation failed deserialization failed",
+            description=str(self)
+        )

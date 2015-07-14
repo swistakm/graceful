@@ -8,10 +8,11 @@ from falcon import errors
 import falcon
 import pytest
 
+from graceful.errors import ValidationError
 from graceful.resources.generic import Resource
-
 from graceful.parameters import StringParam, BaseParam
-
+from graceful.serializers import BaseSerializer
+from graceful.fields import StringField
 
 # note: from now all definitions of resp and req must be annoteded with `noqa`
 #       this is because py.test fixtures do not cooperate easily with flake8
@@ -237,3 +238,29 @@ def test_default_parameters(req):  # noqa
     assert 'foo' in params
     assert params['foo'] == 'default'
     assert 'bar' not in params
+
+
+def test_whole_serializer_validation_as_hhtp_bad_request(req):  # noqa
+
+    class TestSerializer(BaseSerializer):
+        one = StringField("one different than two")
+        two = StringField("two different than one")
+
+        def validate(self, object_dict, partial=False):
+            super().validate(object_dict, partial)
+            # possible use case: kind of uniqueness relationship
+            if object_dict['one'] == object_dict['two']:
+                raise ValidationError("one must be different than two")
+
+    class TestResource(Resource):
+        serializer = TestSerializer()
+
+    resource = TestResource()
+
+    env = create_environ(
+        body=json.dumps({'one': 'foo', 'two': 'foo'}),
+        headers={'Content-Type': 'application/json'},
+    )
+
+    with pytest.raises(errors.HTTPBadRequest):
+        resource.require_validated(Request(env))

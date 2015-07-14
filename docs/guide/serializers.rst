@@ -166,6 +166,37 @@ graceful provides some small set of predefined validator helpers in
 :any:`graceful.validators` module.
 
 
+Resource validation
+~~~~~~~~~~~~~~~~~~~
+
+In most cases field level validation is all that you need but sometimes you
+need to perfom obejct level validation that needs to access multiple fields
+that are already deserialized and validated. Suggested way to do this in
+graceful is to override serializer's ``.validate()`` method and raise
+:class:`graceful.errors.ValidationError` when your validation fails. This
+exception will be then automatically translated to HTTP Bad Request response
+on resource-level handlers. Here is example:
+
+
+.. code-block:: python
+
+    class DrinkSerializer():
+        alcohol = StringField("main ingredient", required=True)
+        mixed_with = StringField("what makes it tasty", required=True)
+
+        def validate(self, object_dict, partial=False):
+            # note: always make sure to call super `validate()`
+            # so whole validation of fields works as expected
+            super().validate(object_dict, partial)
+
+            # here is a place for your own validation
+            if (
+                object_dict['alcohol'] == 'whisky' and
+                object_dict['mixed_with'] == 'cola'
+            ):
+                raise ValidationError("bartender refused!')
+
+
 Custom fields
 ~~~~~~~~~~~~~
 

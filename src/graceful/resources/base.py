@@ -7,7 +7,7 @@ from falcon import errors
 import falcon
 
 from graceful.parameters import BaseParam, IntParam
-from graceful.errors import DeserializationError
+from graceful.errors import DeserializationError, ValidationError
 
 
 class MetaResource(type):
@@ -319,6 +319,11 @@ class BaseResource(object, metaclass=MetaResource):
         except DeserializationError as err:
             # when working on Resource we know that we can finally raise
             # bad request exceptions
+            raise err.as_bad_request()
+
+        except ValidationError as err:
+            # ValidationError is a suggested way to validate whole resource
+            # so we also are prepared to catch it
             raise err.as_bad_request()
 
         return object_dict
