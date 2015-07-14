@@ -219,6 +219,6 @@ are asked for that explicitely. Reviewing pull requests that suddenly had
 their history rewritten just drives me crazy.
 
 
-# licence
+# license
 
 See `LICENSE` file
