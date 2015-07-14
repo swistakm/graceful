@@ -13,17 +13,12 @@ from graceful.resources.generic import Resource
 from graceful.parameters import StringParam, BaseParam
 
 
-# note: from now all definitions of resp and req must be annoteded with `noqa`
-#       this is because py.test fixtures do not cooperate easily with flake8
-from .test_fixtures import req, resp  # noqa
-
-
 class TestResource(Resource):
     def retrieve(self, params, meta, **kwargs):
         return None
 
 
-def test_base_resource_get(req, resp):  # noqa
+def test_base_resource_get(req, resp):
     """
     Test that simple resource GET will return 200 OK response with JSON encoded
     body.
@@ -40,7 +35,7 @@ def test_base_resource_get(req, resp):  # noqa
     assert resp.status == falcon.HTTP_200
 
 
-def test_resource_indent(req, resp):  # noqa
+def test_resource_indent(req, resp):
     resource = TestResource()
 
     # default: without indent
@@ -54,7 +49,7 @@ def test_resource_indent(req, resp):  # noqa
     assert "    " in resp.body
 
 
-def test_resource_meta(req, resp):  # noqa
+def test_resource_meta(req, resp):
     """
     Test if meta output part on resource GET has a desired structure
 
@@ -70,7 +65,7 @@ def test_resource_meta(req, resp):  # noqa
     assert 'params' in body['meta']
 
 
-def test_required_params(req, resp):  # noqa
+def test_required_params(req, resp):
     """
     Test that when params are missing then specific falcon exception is raised
     and thus proper status code will be returned.
@@ -92,7 +87,7 @@ def test_required_params(req, resp):  # noqa
     assert resp.status == falcon.HTTP_OK
 
 
-def test_resource_accepts_kwargs(req, resp):  # noqa
+def test_resource_accepts_kwargs(req, resp):
     """
     Test that on_get method accepts additional keyword arguments.
     This is important because allows passing of arguments from url template.
@@ -104,7 +99,7 @@ def test_resource_accepts_kwargs(req, resp):  # noqa
     resource.on_get(req, resp, foo='bar')
 
 
-def test_describe(req, resp):  # noqa
+def test_describe(req, resp):
     """
     Test if output of resource.description() has desired form.
 
@@ -127,7 +122,7 @@ def test_describe(req, resp):  # noqa
     assert description['foo'] == 'bar'
 
 
-def test_options(resp):  # noqa
+def test_options(resp):
     """
     Test that options is a json serialized output of resource.describe()
 
@@ -148,7 +143,7 @@ def test_options(resp):  # noqa
     assert resource.describe(req, resp) == json.loads(resp.body)
 
 
-def test_options_with_additional_args(req, resp):  # noqa
+def test_options_with_additional_args(req, resp):
     """
     Test that requesting OPTIONS will succeed even if not expected additional
     kwargs are passed.
@@ -165,7 +160,7 @@ def test_options_with_additional_args(req, resp):  # noqa
     resource.on_options(req, resp, additionnal_kwarg="foo")
 
 
-def test_declarative_parameters(req, resp):  # noqa
+def test_declarative_parameters(req, resp):
     class SomeResource(Resource):
         required_param = StringParam(details="some param", required=True)
         optional_param = StringParam(details="some param", required=False)
@@ -226,7 +221,7 @@ def test_parameter_value_errors_translated_to_http_errors(req, resp):  # noqa
         resource.on_get(req, resp)
 
 
-def test_default_parameters(req):  # noqa
+def test_default_parameters(req):
     class ResourceWithDefaults(Resource):
         foo = StringParam(details="foo with defaults", default="default")
         bar = StringParam(details="bar w/o default")
