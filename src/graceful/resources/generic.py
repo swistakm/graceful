@@ -73,7 +73,7 @@ class RetrieveAPI(RetrieveMixin, BaseResource):
     serializer = None
 
     def describe(self, req, resp, **kwargs):
-        return super(RetrieveAPI, self).describe(
+        return super().describe(
             req, resp,
             type='object',
             fields=self.serializer.describe() if self.serializer else None,
@@ -86,7 +86,7 @@ class RetrieveAPI(RetrieveMixin, BaseResource):
         )
 
     def on_get(self, req, resp, **kwargs):
-        return super(RetrieveAPI, self).on_get(
+        return super().on_get(
             req, resp, handler=self._retrieve, **kwargs
         )
 
@@ -111,7 +111,7 @@ class RetrieveUpdateAPI(UpdateMixin, RetrieveAPI):
 
     def on_put(self, req, resp, **kwargs):
         validated = self.require_validated(req)
-        return super(RetrieveUpdateAPI, self).on_put(
+        return super().on_put(
             req, resp,
             handler=partial(self._update, validated=validated),
             **kwargs
@@ -152,7 +152,7 @@ class ListAPI(ListMixin, BaseResource):
         ]
 
     def describe(self, req, resp, **kwargs):
-        return super(ListAPI, self).describe(
+        return super().describe(
             req, resp,
             type='list',
             fields=self.serializer.describe() if self.serializer else None,
@@ -160,7 +160,7 @@ class ListAPI(ListMixin, BaseResource):
         )
 
     def on_get(self, req, resp, **kwargs):
-        return super(ListAPI, self).on_get(req, resp, handler=self._list)
+        return super().on_get(req, resp, handler=self._list)
 
 
 class ListCreateAPI(CreateMixin, ListAPI):
@@ -184,7 +184,7 @@ class ListCreateAPI(CreateMixin, ListAPI):
     def on_post(self, req, resp, **kwargs):
         validated = self.require_validated(req)
 
-        return super(ListCreateAPI, self).on_post(
+        return super().on_post(
             req, resp,
             handler=partial(self._create, validated=validated),
             **kwargs
@@ -205,7 +205,7 @@ class PaginatedListAPI(PaginatedMixin, ListAPI):
 
     """
     def _list(self, params, meta, **kwargs):
-        objects = super(PaginatedListAPI, self)._list(params, meta, **kwargs)
+        objects = super()._list(params, meta, **kwargs)
         # note: we need to populate meta after objects are retrieved
         self.add_pagination_meta(params, meta)
         return objects
@@ -227,7 +227,7 @@ class PaginatedListCreateAPI(PaginatedMixin, ListCreateAPI):
 
     """
     def _list(self, params, meta, **kwargs):
-        objects = super(PaginatedListCreateAPI, self)._list(
+        objects = super()._list(
             params, meta, **kwargs
         )
         # note: we need to populate meta after objects are retrieved

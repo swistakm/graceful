@@ -64,14 +64,14 @@ class MetaResource(type):
     def __new__(mcs, name, bases, namespace):
         namespace[mcs._params_storage_key] = mcs._get_params(bases, namespace)
 
-        return super(MetaResource, mcs).__new__(
+        return super().__new__(
             # note: there is no need preserve order in namespace anymore so
             # we convert it explicitely to dict
             mcs, name, bases, dict(namespace)
         )
 
 
-class BaseResource(object, metaclass=MetaResource):
+class BaseResource(metaclass=MetaResource):
     """
     Base Resouce class for handling resource responses, parameter
     deserialization and validation of request included representations if
@@ -154,7 +154,7 @@ class BaseResource(object, metaclass=MetaResource):
 
              class SomeResource(BaseResource):
                  def describe(req, resp, **kwargs):
-                     return super(SomeResource, self).describe(
+                     return super().describe(
                          req, resp, type='list', **kwargs
                       )
 

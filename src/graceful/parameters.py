@@ -135,7 +135,7 @@ class BaseParam():
 
             class DummyParam(BaseParam):
                def description(self, **kwargs):
-                   super(DummyParam, self).describe(is_dummy=True, **kwargs)
+                   super().describe(is_dummy=True, **kwargs)
 
         """
 

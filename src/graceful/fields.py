@@ -4,7 +4,7 @@ import inspect
 from graceful.validators import min_validator, max_validator
 
 
-class BaseField(object):
+class BaseField():
     """
     Base field class for subclassing. To create new field type
     subclass `BaseField` and implement following methods:
@@ -115,7 +115,7 @@ class BaseField(object):
 
             class DummyField(BaseField):
                def description(self, **kwargs):
-                   super(DummyParam, self).describe(is_dummy=True, **kwargs)
+                   super().describe(is_dummy=True, **kwargs)
 
         """
         description = {
@@ -222,7 +222,7 @@ class BoolField(BaseField):
             representations=None,
             **kwargs
     ):
-        super(BoolField, self).__init__(details, **kwargs)
+        super().__init__(details, **kwargs)
 
         if representations:
             # could not resist...
@@ -272,7 +272,7 @@ class IntField(BaseField):
             min_value=None,
             **kwargs
     ):
-        super(IntField, self).__init__(details, **kwargs)
+        super().__init__(details, **kwargs)
 
         self.max_value = max_value
         self.min_value = min_value
@@ -313,7 +313,7 @@ class FloatField(BaseField):
             min_value=None,
             **kwargs
     ):
-        super(FloatField, self).__init__(details, **kwargs)
+        super().__init__(details, **kwargs)
 
         self.max_value = max_value
         self.min_value = min_value
