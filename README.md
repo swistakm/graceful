@@ -22,6 +22,10 @@ Features:
 * falcon>=0.3.0
 * python3 exclusive (tested from 3.3 to 3.4)
 
+There is no community behind graceful yet but I hope we will build one someday
+with your help. Anyway there is a mailing list on 
+[Librelist](http://librelist.com).
+Just send an email to graceful@librelist.com and you're subscribed.
 
 
 # python3 only
