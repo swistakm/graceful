@@ -300,3 +300,47 @@ def test_whole_serializer_validation_as_hhtp_bad_request(req):
 
     with pytest.raises(errors.HTTPBadRequest):
         resource.require_validated(Request(env))
+
+
+def test_require_representation_application_json():
+    resource = TestResource()
+
+    # simple application/json content type
+    env = create_environ(
+        body=json.dumps({'one': 'foo', 'two': 'foo'}),
+        headers={'Content-Type': 'application/json'},
+    )
+
+    representation = resource.require_representation(Request(env))
+    assert isinstance(representation, dict)
+
+    # application/json content type with charset param
+    env = create_environ(
+        body=json.dumps({'one': 'foo', 'two': 'foo'}),
+        headers={'Content-Type': 'application/json; charset=UTF-8'},
+    )
+
+    representation = resource.require_representation(Request(env))
+    assert isinstance(representation, dict)
+
+
+def test_require_representation_unsupported_media_type():
+    resource = TestResource()
+
+    # invalid content type format
+    env = create_environ(
+        body=json.dumps({'one': 'foo', 'two': 'foo'}),
+        headers={'Content-Type': 'foo bar'},
+    )
+
+    with pytest.raises(falcon.HTTPUnsupportedMediaType):
+        resource.require_representation(Request(env))
+
+    # valid format but surely unsupported (RFC-1437)
+    env = create_environ(
+        body=json.dumps({'one': 'foo', 'two': 'foo'}),
+        headers={'Content-Type': 'matter-transport/sentient-life-form'},
+    )
+
+    with pytest.raises(falcon.HTTPUnsupportedMediaType):
+        resource.require_representation(Request(env))

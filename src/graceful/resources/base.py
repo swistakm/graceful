@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from falcon import errors
 import falcon
+from mimeparse import parse_mime_type
 
 from graceful.parameters import BaseParam, IntParam
 from graceful.errors import DeserializationError, ValidationError
@@ -297,13 +298,22 @@ class BaseResource(metaclass=MetaResource):
             dict: raw dictionary of representation supplied in request body
 
         """
+        try:
+            type_, subtype, _ = parse_mime_type(req.content_type)
+            content_type = '/'.join((type_, subtype))
+        except:
+            raise falcon.HTTPUnsupportedMediaType(
+                description="Invalid Content-Type header: {}".format(
+                    req.content_type
+                )
+            )
 
-        if req.content_type == 'application/json':
+        if content_type == 'application/json':
             body = req.stream.read()
             return json.loads(body.decode('utf-8'))
         else:
             raise falcon.HTTPUnsupportedMediaType(
-                description="only JSON supported"
+                description="only JSON supported, got: {}".format(content_type)
             )
 
     def require_validated(self, req, partial=False):
