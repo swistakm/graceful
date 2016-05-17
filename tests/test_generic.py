@@ -49,7 +49,7 @@ class TestSerializer(BaseSerializer):
     )
 
 
-class StoredResource(object):
+class StoredResource:
     def __init__(self, storage=None):
         self.storage = storage or []
 
@@ -96,6 +96,13 @@ class TestListAPI(ListAPI, StoredResource):
     serializer = TestSerializer()
 
     def list(self, params, meta, **kwargs):
+        return self.storage
+
+
+class TestListWithUriVariableAPI(ListAPI, StoredResource):
+    serializer = TestSerializer()
+
+    def list(self, params, meta, uri_template_variable, **kwargs):
         return self.storage
 
 
@@ -169,39 +176,47 @@ class GenericsTestBase(TestBase):
         assert 'content' in body
 
 
-class RetrieveTestsMixin(object):
+class RetrieveTestsMixin:
     """
     Contains all test that should be performed on Resource that supports
     retrieve
     """
+    uri_template = '/items/{index}'
+
     def test_retrieve(self):
-        result = self.simulate_request('/items/0', decode='utf-8')
+        result = self.simulate_request(
+            self.uri_template.format(index=0), decode='utf-8'
+        )
         self._assert_consistent_form(result)
 
         assert self.srmock.status == falcon.HTTP_OK
 
     def test_retrieve_not_found(self):
         # note: only one item in storage so this will return 404
-        self.simulate_request('/items/1', decode='utf-8')
+        self.simulate_request(
+            self.uri_template.format(index=1), decode='utf-8'
+        )
         assert self.srmock.status == falcon.HTTP_NOT_FOUND
 
     def test_options(self):
         result = self.simulate_request(
-            '/items/1', decode='utf-8', method='OPTIONS'
+            self.uri_template.format(index=1), decode='utf-8', method='OPTIONS'
         )
         description = json.loads(result)
         assert description['type'] == 'object'
         assert 'fields' in description
 
 
-class UpdateTestsMixin(object):
+class UpdateTestsMixin:
     """
     Contains all test that should be performed on Resource that supports
     update
     """
+    uri_template = '/items/{index}'
+
     def do_update(self, index_, representation):
         return self.simulate_request(
-            '/items/{}'.format(index_),
+            self.uri_template.format(index=index_),
             decode='utf-8',
             method='PUT',
             headers={'Content-Type': 'application/json'},
@@ -242,7 +257,7 @@ class UpdateTestsMixin(object):
 
     def test_update_unsuported_media_type(self):
         self.simulate_request(
-            '/items/0',
+            self.uri_template.format(index=0),
             decode='utf-8',
             method='PUT',
             headers={'Content-Type': 'unsupported'},
@@ -251,14 +266,16 @@ class UpdateTestsMixin(object):
         assert self.srmock.status == falcon.HTTP_UNSUPPORTED_MEDIA_TYPE
 
 
-class DeleteTestsMixin(object):
+class DeleteTestsMixin:
     """
     Contains all test that should be performed on resource that supports
     delete
     """
+    uri_template = '/items/{index}'
+
     def do_delete(self, index_):
         return self.simulate_request(
-            '/items/{}'.format(index_),
+            self.uri_template.format(index=index_),
             decode='utf-8',
             method='DELETE',
         )
@@ -273,31 +290,35 @@ class DeleteTestsMixin(object):
         assert self.srmock.status == falcon.HTTP_NOT_FOUND
 
 
-class ListTestsMixin(object):
+class ListTestsMixin:
     """
     Contains all tests that should be performed on resource that supports list
     """
+    uri_template = '/items/'
+
     def test_list(self):
-        result = self.simulate_request('/items/', decode='utf-8')
+        result = self.simulate_request(self.uri_template, decode='utf-8')
         self._assert_consistent_form(result)
 
         assert self.srmock.status == falcon.HTTP_OK
 
     def test_options(self):
         result = self.simulate_request(
-            '/items/', decode='utf-8', method='OPTIONS'
+            self.uri_template, decode='utf-8', method='OPTIONS'
         )
         description = json.loads(result)
         assert description['type'] == 'list'
         assert 'fields' in description
 
 
-class PaginationTestsMixin(object):
+class PaginationTestsMixin:
+    uri_template = '/items/'
+
     def test_list_pagination(self):
         for _ in range(100):
             self.storage.append({"writeble": "foo", "readonly": "bar"})
 
-        result = self.simulate_request('/items/', decode='utf-8')
+        result = self.simulate_request(self.uri_template, decode='utf-8')
         body = json.loads(result)
 
         assert 'next' in body['meta']
@@ -306,7 +327,7 @@ class PaginationTestsMixin(object):
 
         # now try to access page without results
         result = self.simulate_request(
-            '/items/', decode='utf-8', query_string="page=1000"
+            self.uri_template, decode='utf-8', query_string="page=1000"
         )
         body = json.loads(result)
         assert len(body['content']) == 0
@@ -316,9 +337,11 @@ class CreateTestsMixin():
     """
     Contains all tests that should be performed on resource that suports create
     """
+    uri_template = '/items/'
+
     def do_create(self, representation):
         return self.simulate_request(
-            '/items/',
+            self.uri_template,
             decode='utf-8',
             method='POST',
             headers={'Content-Type': 'application/json'},
@@ -355,7 +378,7 @@ class CreateTestsMixin():
 
     def test_create_unsuported_media_type(self):
         self.simulate_request(
-            '/items/',
+            self.uri_template,
             decode='utf-8',
             method='POST',
             headers={'Content-Type': 'unsupported'},
@@ -373,7 +396,7 @@ class RetrieveTestCase(
     def setUp(self):
         super(RetrieveTestCase, self).setUp()
         self.api.add_route(
-            '/items/{index}',
+            self.uri_template,
             TestRetrieveAPI(self.storage)
         )
 
@@ -386,7 +409,7 @@ class RetrieveUpdateTestCase(
     def setUp(self):
         super(RetrieveUpdateTestCase, self).setUp()
         self.api.add_route(
-            '/items/{index}',
+            self.uri_template,
             TestRetrieveUpdateAPI(self.storage)
         )
 
@@ -400,7 +423,7 @@ class RetrieveUpdateDeleteTestCase(
     def setUp(self):
         super(RetrieveUpdateDeleteTestCase, self).setUp()
         self.api.add_route(
-            '/items/{index}',
+            self.uri_template,
             TestRetrieveUpdateDeleteAPI(self.storage)
         )
 
@@ -412,8 +435,24 @@ class ListTestCase(
     def setUp(self):
         super(ListTestCase, self).setUp()
         self.api.add_route(
-            '/items/',
+            self.uri_template,
             TestListAPI(self.storage)
+        )
+
+
+class ListWithUriVariableTestCase(
+    ListTestsMixin,
+    GenericsTestBase,
+):
+    """ Tests that ListAPI-based endpoints access URI template variables
+    """
+    uri_template = '/items/{uri-variable}'
+
+    def setUp(self):
+        super(ListWithUriVariableTestCase, self).setUp()
+        self.api.add_route(
+            self.uri_template,
+            TestListWithUriVariableAPI(self.storage),
         )
 
 
@@ -425,7 +464,7 @@ class ListCreateTestCase(
     def setUp(self):
         super(ListCreateTestCase, self).setUp()
         self.api.add_route(
-            '/items/',
+            self.uri_template,
             TestListCreateAPI(self.storage)
         )
 
@@ -438,7 +477,7 @@ class PaginatedListTestCase(
     def setUp(self):
         super(PaginatedListTestCase, self).setUp()
         self.api.add_route(
-            '/items/',
+            self.uri_template,
             TestPaginatedListAPI(self.storage)
         )
 
@@ -452,6 +491,6 @@ class PaginatedListCreateTestCase(
     def setUp(self):
         super(PaginatedListCreateTestCase, self).setUp()
         self.api.add_route(
-            '/items/',
+            self.uri_template,
             TestPaginatedListCreateAPI(self.storage)
         )
