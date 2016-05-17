@@ -160,7 +160,7 @@ class ListAPI(ListMixin, BaseResource):
         )
 
     def on_get(self, req, resp, **kwargs):
-        return super().on_get(req, resp, handler=self._list)
+        return super().on_get(req, resp, handler=self._list, **kwargs)
 
 
 class ListCreateAPI(CreateMixin, ListAPI):

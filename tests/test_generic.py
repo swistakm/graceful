@@ -446,7 +446,7 @@ class ListWithUriVariableTestCase(
 ):
     """ Tests that ListAPI-based endpoints access URI template variables
     """
-    uri_template = '/items/{uri-variable}'
+    uri_template = '/items/{uri_template_variable}'
 
     def setUp(self):
         super(ListWithUriVariableTestCase, self).setUp()
