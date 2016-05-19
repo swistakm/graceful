@@ -2,8 +2,17 @@ language: python
 
 install: pip install tox --use-mirrors
 env:
-  - TOX_ENV=py33
-  - TOX_ENV=py34
+  # falcon 0.3.x test matrix
+  - TOX_ENV=py33-falcon0.3
+  - TOX_ENV=py34-falcon0.3
+  - TOX_ENV=py35-falcon0.3
+
+  # falcon 1.0.x test matrix
+  - TOX_ENV=py33-falcon1.0
+  - TOX_ENV=py34-falcon1.0
+  - TOX_ENV=py35-falcon1.0
+
+  # linters and coverage
   - TOX_ENV=pep8
   - TOX_ENV=coverage
 
