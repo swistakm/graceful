@@ -197,11 +197,15 @@ class BoolField(BaseField):
     * False: ``[False', 'false', 'FALSE', 'F', 'f' '0', 0, 0.0, False``
     * True: ``['True', 'true', 'TRUE', 'T', 't', '1', 1, True]``
 
-    By default by as representations of internal object's value it returns
-    python's False/True values that will be later serialized to form that
+    By default, the outup representations of internal object's value are
+    Python's False/True values that will be later serialized to form that
     is native for content-type of use.
 
     This behavior can be changed using ``representations`` field argument.
+    Note that when using ``representations`` parameter you need to make
+    strict decision and there is no ability to accept multiple options for
+    true/false representations. Anyway, it is reccomended approach to
+    strictly define these values.
 
     Args:
 
@@ -238,7 +242,7 @@ class BoolField(BaseField):
             return False
         else:
             raise ValueError(
-                "{type} type value must be one of {{values}}".format(
+                "{type} type value must be one of {values}".format(
                     type=self.type,
                     values=self._TRUE_VALUES.union(self._FALSE_VALUES)
                 )
