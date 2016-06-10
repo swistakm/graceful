@@ -4,10 +4,11 @@
 
 
 # graceful
-`graceful` is documentation centered falcon REST toolkit. It is highly inspired
+`graceful` is elegant Python REST toolkit built on top of
+[falcon](http://github.com/falconry/falcon). It is highly inspired
 by [Django REST framework](http://www.django-rest-framework.org/) - mostly by
 how object serialization is done but more emphasis here is put on API to
-being self-descriptive.
+be self-descriptive.
 
 Features:
 
