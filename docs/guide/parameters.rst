@@ -1,7 +1,7 @@
 Parameters
 ----------
 
-Parameters provide a way to describe and evaluate all request qeury params
+Parameters provide a way to describe and evaluate all request query params
 that can be used in your API resources.
 
 New parameters are added to resources as class attributes:
@@ -89,28 +89,28 @@ codes using pycountry module:
     import pycountry
 
     class LanguageParam(BaseParam):
-    """
-    This param normalizes language code passed to is and checks if it is valid
-    """
+        """
+        This param normalizes language code passed to is and checks if it is valid
+        """
 
-    type = 'ISO 639-2 alpha2 language code'
-    spec = (
-        'ISO 639-2 alpha2 code list',
-        "http://www.loc.gov/standards/iso639-2/php/code_list.php",
-    )
+        type = 'ISO 639-2 alpha2 language code'
+        spec = (
+            'ISO 639-2 alpha2 code list',
+            "http://www.loc.gov/standards/iso639-2/php/code_list.php",
+        )
 
-    def value(self, raw_value):
-        try:
-            # normalize code since we store then lowercase
-            normalized = raw_value.lower()
-            # first of all check if country so no query will be made if it is
-            # invalid
-            pycountry.languages.get(alpha2=normalized)
+        def value(self, raw_value):
+            try:
+                # normalize code since we store then lowercase
+                normalized = raw_value.lower()
+                # first of all check if country so no query will be made if it is
+                # invalid
+                pycountry.languages.get(alpha2=normalized)
 
-            return normalized
+                return normalized
 
-        except KeyError:
-            raise ValueError(
-                "'{code}' is not valid alpha2 language code".format(
-                    code=raw_value)
-            )
+            except KeyError:
+                raise ValueError(
+                    "'{code}' is not valid alpha2 language code".format(
+                        code=raw_value)
+                )

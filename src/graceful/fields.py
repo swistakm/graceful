@@ -194,7 +194,7 @@ class BoolField(BaseField):
     Represents boolean type of field. By default accepts a wide range of
     incoming True/False representations:
 
-    * False: ``[False', 'false', 'FALSE', 'F', 'f' '0', 0, 0.0, False``
+    * False: ``['False', 'false', 'FALSE', 'F', 'f', '0', 0, 0.0, False]``
     * True: ``['True', 'true', 'TRUE', 'T', 't', '1', 1, True]``
 
     By default by as representations of internal object's value it returns
@@ -212,7 +212,7 @@ class BoolField(BaseField):
     type = 'bool'
 
     _TRUE_VALUES = {'True', 'true', 'TRUE', 'T', 't', '1', 1, True}
-    _FALSE_VALUES = {'False', 'false', 'FALSE', 'F', 'f' '0', 0, 0.0, False}
+    _FALSE_VALUES = {'False', 'false', 'FALSE', 'F', 'f', '0', 0, 0.0, False}
 
     _DEFAULT_REPRESENTATIONS = (False, True)
 

@@ -56,9 +56,9 @@ class BaseParam():
            class BoolParam(BaseParam):
                def value(self, data):
                    if data in {'true', 'True', 'yes', '1', 'Y'}:
-                       return True:
+                       return True
                    elif data in {'false', 'False', 'no', '0', 'N'}:
-                       return False:
+                       return False
                    else:
                        raise ValueError(
                            "{data} is not valid boolean field".format(
@@ -234,3 +234,19 @@ class DecimalParam(BaseParam):
             raise ValueError(
                 "Could not parse '{}' value as decimal".format(raw_value)
             )
+
+
+class BoolParam(BaseParam):
+    """
+    Describes parameter that has value expressed as bool
+    """
+    type = "bool"
+
+    _FALSE_VALUES = {'False', 'false', 'FALSE', 'F', 'f', '0', '0.0'}
+
+    def value(self, raw_value):
+        """Decodes param as bool value"""
+        if raw_value in self._FALSE_VALUES:
+            return False
+        else:
+            return bool(raw_value)
