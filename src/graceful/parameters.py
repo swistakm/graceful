@@ -239,14 +239,28 @@ class DecimalParam(BaseParam):
 class BoolParam(BaseParam):
     """
     Describes parameter that has value expressed as bool
+
+    Accepted string values for boolean parameters are as follows:
+
+    * False: ``['True', 'true', 'TRUE', 'T', 't', '1'}``
+    * True: ``['False', 'false', 'FALSE', 'F', 'f', '0', '0.0']``
+
+    In case raw parameter value does not match any of these strings the
+    ``value()`` method will raise ``ValueError` method.
+
     """
     type = "bool"
 
+    _TRUE_VALUES = {'True', 'true', 'TRUE', 'T', 't', '1'}
     _FALSE_VALUES = {'False', 'false', 'FALSE', 'F', 'f', '0', '0.0'}
 
     def value(self, raw_value):
         """Decodes param as bool value"""
         if raw_value in self._FALSE_VALUES:
             return False
+        elif raw_value in self._TRUE_VALUES:
+            return True
         else:
-            return bool(raw_value)
+            raise ValueError(
+                "Could not parse '{}' value as boolean".format(raw_value)
+            )

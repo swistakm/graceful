@@ -136,3 +136,11 @@ def test_bool_param(encoded, desired):
     param = BoolParam(details="some bool field")
 
     assert param.value(encoded) == desired
+
+
+@pytest.mark.parametrize('raw_value', ('foo', 'bar', 'null',))
+def test_bool_param_invalid(raw_value):
+    param = BoolParam(details="some bool field")
+
+    with pytest.raises(ValueError):
+        assert param.value(raw_value)
