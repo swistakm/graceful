@@ -11,6 +11,7 @@ from graceful.parameters import (
     IntParam,
     FloatParam,
     DecimalParam,
+    BoolParam,
 )
 
 
@@ -120,3 +121,18 @@ def test_decimal_param():
     param = DecimalParam(details="some decimal field")
 
     _test_param(param, '123.123', 'aaa', decimal.Decimal("123.123"))
+
+
+@pytest.mark.parametrize('encoded, desired', (
+    ('True', True),
+    ('TRUE', True),
+    ('1', True),
+    ('False', False),
+    ('FALSE', False),
+    ('0', False),
+    ('0.0', False),
+))
+def test_bool_param(encoded, desired):
+    param = BoolParam(details="some bool field")
+
+    assert param.value(encoded) == desired
