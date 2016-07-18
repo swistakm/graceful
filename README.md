@@ -154,6 +154,7 @@ HTTP/1.1 200 OK
 Connection: close
 Date: Tue, 16 Jun 2015 08:40:00 GMT
 Server: gunicorn/19.3.0
+allow: GET, OPTIONS
 content-length: 740
 content-type: application/json
 

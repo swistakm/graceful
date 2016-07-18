@@ -21,6 +21,27 @@ class TestResource(Resource):
         return None
 
 
+def _retrieve_header(response, header):
+    """ Little compatibility utility for response.get_header() method.
+
+    response.get_header() was introduced in falcon 1.0 but we want to retrieve
+    response header values in al versions in consitent manner.
+
+    :param response: falcon.Request() instance
+    :param header: case-insensitive header name
+    :return: header value
+    """
+    try:
+        return response.get_header(header)
+    except AttributeError:
+        # compat: on falcon<1.0 there is not get_header() method so we must
+        #         access _headers dictionary directly
+        # note: _headers dictionary stores headers with lower-case names but
+        #       get_header is case-insensitive so make make it lowercase to
+        #       ensure consistency acros versions.
+        return response._headers[header.lower()]
+
+
 def test_base_resource_get(req, resp):
     """
     Test that simple resource GET will return 200 OK response with JSON encoded
@@ -140,6 +161,10 @@ def test_options(resp):
 
     resource.on_options(req, resp)
 
+    assert all([
+        'OPTIONS' in _retrieve_header(resp, 'allow'),
+        'GET' in _retrieve_header(resp, 'allow'),
+    ])
     assert resp.status == falcon.HTTP_200
     assert json.loads(resp.body)
     # assert this is obviously the same

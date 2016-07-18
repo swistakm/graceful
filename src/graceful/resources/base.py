@@ -201,6 +201,7 @@ class BaseResource(metaclass=MetaResource):
             None
 
         """
+        resp.set_header('Allow', ', '.join(self.allowed_methods()))
         resp.body = json.dumps(self.describe(req, resp))
         resp.content_type = 'application/json'
 
