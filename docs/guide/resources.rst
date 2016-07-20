@@ -23,10 +23,14 @@ your own http GET method handler like following:
    from graceful.parameters import StringParam, IntParam
 
    class SomeResource(BaseResource):
-        some_param = StringParam("example string param")
-        some_other_param = IntParam
+        # describe how HTTP query string parameters are handled
+        some_param = StringParam("example string query string param")
+        some_other_param = IntParam("example integer query string param")
+
 
         def on_get(self, req, resp):
+            # retrieve dictionary of query string parameters parsed
+            # and validated according to resource class description
             params = self.require_params(req)
 
             ## create your own response like always:

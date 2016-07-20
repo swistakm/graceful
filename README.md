@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/swistakm/graceful.svg?branch=master)](https://travis-ci.org/swistakm/graceful)
 [![Coverage Status](https://coveralls.io/repos/swistakm/graceful/badge.svg?branch=master)](https://coveralls.io/r/swistakm/graceful?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/graceful/badge/?version=latest)](https://readthedocs.org/projects/graceful/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/graceful/badge/?version=latest)](http://graceful.readthedocs.io/en/latest/)
 
 
 # graceful
