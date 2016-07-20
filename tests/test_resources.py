@@ -269,6 +269,40 @@ def test_parameter_with_many_unspecified(req):
     assert 'foo' not in params
 
 
+def test_parameter_with_many_and_custom_container_type_object():
+    class StringSetParam(StringParam):
+        # container is simply a type object (it is not a descriptor)
+        # so does not receive self as a parameter
+        container = set
+
+    class SomeResource(Resource):
+        foo = StringSetParam(details="give me foo", many=True)
+
+    env = create_environ(query_string="foo=bar&foo=baz")
+    resource = SomeResource()
+    params = resource.require_params(Request(env))
+
+    assert isinstance(params['foo'], set)
+    assert 'bar' in params['foo'] and 'baz' in params['foo']
+
+
+def test_parameter_with_many_and_custom_container_method():
+    class StringSetParam(StringParam):
+        # container is custom method call ("bound" to param instance)
+        def container(self, values):
+            return set(values)
+
+    class SomeResource(Resource):
+        foo = StringSetParam(details="give me foo", many=True)
+
+    env = create_environ(query_string="foo=bar&foo=baz")
+    resource = SomeResource()
+    params = resource.require_params(Request(env))
+
+    assert isinstance(params['foo'], set)
+    assert 'bar' in params['foo'] and 'baz' in params['foo']
+
+
 def test_parameter_value_errors_translated_to_http_errors(req, resp):
     class InvalidParam(BaseParam):
         def value(self, raw_value):

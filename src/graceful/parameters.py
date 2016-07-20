@@ -39,7 +39,7 @@ class BaseParam():
            ``ValueError`` as having required parameters with default
            value has no sense.
 
-        param (str): set to ``True`` if multiple occurences of this parameter
+        many (str): set to ``True`` if multiple occurences of this parameter
            can be included in query string, as a result values for this
            parameter will be always included as a list in params dict. Defaults
            to ``False``.
@@ -69,6 +69,8 @@ class BaseParam():
     """
     spec = None
     type = None
+
+    container = list
 
     def __init__(
             self,
