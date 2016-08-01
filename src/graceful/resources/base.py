@@ -243,11 +243,10 @@ class BaseResource(metaclass=MetaResource):
                 try:
                     if param.many:
                         # params with "many" enabled need special care
-                        params[name] = req.get_param_as_list(
-                            name, param.value,
-                        ) or [
-                            param.default and param.value(param.default)
-                        ]
+                        params[name] = param.container(
+                            req.get_param_as_list(name, param.value) or
+                            [param.default and param.value(param.default)]
+                        )
                     else:
                         # note that if many==False and query parameter
                         # occurs multiple times in qs then it is
