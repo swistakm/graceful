@@ -1,9 +1,6 @@
 graceful.resources package
 ==========================
 
-Submodules
-----------
-
 graceful.resources.base module
 ------------------------------
 
@@ -11,6 +8,7 @@ graceful.resources.base module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 graceful.resources.generic module
 ---------------------------------
@@ -21,10 +19,10 @@ graceful.resources.generic module
     :show-inheritance:
 
 
-Module contents
----------------
+graceful.resources.mixins module
+--------------------------------
 
-.. automodule:: graceful.resources
+.. automodule:: graceful.resources.mixins
     :members:
     :undoc-members:
     :show-inheritance:

@@ -117,7 +117,7 @@ Now run it with [gunicorn](https://github.com/benoitc/gunicorn):
 
     gunicorn -b localhost:8888 example
 
-And you're ready to query it (here with awesome [hhtpie](http://httpie.org)
+And you're ready to query it (here with awesome [httpie](http://httpie.org)
 tool):
 
 ```

@@ -5,6 +5,7 @@ API reference
    :hidden:
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 5
 
    graceful
+   graceful.resources

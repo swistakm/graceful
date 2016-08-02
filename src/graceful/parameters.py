@@ -248,7 +248,7 @@ class BoolParam(BaseParam):
     * True: ``['False', 'false', 'FALSE', 'F', 'f', '0', '0.0']``
 
     In case raw parameter value does not match any of these strings the
-    ``value()`` method will raise ``ValueError` method.
+    ``value()`` method will raise ``ValueError`` method.
 
     """
     type = "bool"

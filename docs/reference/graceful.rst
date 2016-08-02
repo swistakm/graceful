@@ -1,16 +1,6 @@
 graceful package
 ================
 
-Subpackages
------------
-
-.. toctree::
-
-    graceful.resources
-
-Submodules
-----------
-
 graceful.fields module
 ----------------------
 
@@ -18,6 +8,7 @@ graceful.fields module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 graceful.parameters module
 --------------------------
@@ -27,6 +18,7 @@ graceful.parameters module
     :undoc-members:
     :show-inheritance:
 
+
 graceful.serializers module
 ---------------------------
 
@@ -34,6 +26,7 @@ graceful.serializers module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 graceful.validators module
 --------------------------
@@ -44,10 +37,10 @@ graceful.validators module
     :show-inheritance:
 
 
-Module contents
----------------
+graceful.errors module
+----------------------
 
-.. automodule:: graceful
+.. automodule:: graceful.errors
     :members:
     :undoc-members:
     :show-inheritance:

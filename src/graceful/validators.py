@@ -66,7 +66,7 @@ def match_validator(expression):
 
     Args:
         match: if string then this will be converted to regular expression
-           using ``re.compile``. Can be also any object that has ``match()`
+           using ``re.compile``. Can be also any object that has ``match()``
            method like already compiled regular regular expression or custom
            matching object/class.
 

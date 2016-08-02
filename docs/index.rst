@@ -9,7 +9,7 @@ Contents:
    :maxdepth: 2
 
    guide/index.rst
-   modules.rst
+   reference/modules.rst
 
 .. include:: readme.rst
 

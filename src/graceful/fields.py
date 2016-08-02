@@ -146,9 +146,8 @@ class BaseField():
             Concept of validation for fields is understood here as a process
             of checking if data of valid type (successfully parsed/processed by
             ``.from_representation`` handler) does meet some other constraints
-            (lenght, bounds, unique, etc). Becasue of that this method is
-            always called with result of ``.from_representation()`` passed
-            as value.
+            (lenght, bounds, uniqueness, etc). So this method is always called
+            with result of ``.from_representation()`` passed as its argument.
 
         """
         for validator in self.validators:

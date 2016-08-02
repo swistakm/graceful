@@ -5,7 +5,10 @@ Graceful guide
    :hidden:
 
 
-.. include:: resources.rst
-.. include:: parameters.rst
-.. include:: serializers.rst
-.. include:: content-types.rst
+.. toctree::
+
+   resources
+   generic-resources
+   parameters
+   serializers
+   content-types

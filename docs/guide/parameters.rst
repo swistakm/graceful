@@ -188,11 +188,13 @@ basic API as follows:
 
 
 With such definition your client can provide list of multiple values for the
-``search`` param using multiple instances of ``search=<value>``in his query
-string e.g. ``search=matt&search=damon&search=affleck``.
+``search`` param using multiple instances of ``search=<value>`` in his query
+string e.g::
 
-**Important:** if ``many`` is set to ``False``the value stored under
-corresponding key will   **always** represent the single parameter value. It is
+    search=matt&search=damon&search=affleck
+
+**Important:** if ``many`` is set to ``False`` the value stored under
+corresponding key will  **always** represent the single parameter value. It is
 important to note that providing multiple values for same parameter in the
 query string by your API client is not considered an error even if parameter is
 described as ``many=False``. In that case only one value will be included in
@@ -203,8 +205,8 @@ of possibility of undefined behaviour when not following your instructions.
 
 
 
-Order of values and representing ordered data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Order of values and ordered data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Remember that multiple values coming from parameter defined using ``many=True``
 should be always considered independend from each other. This means that
