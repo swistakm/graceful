@@ -76,11 +76,14 @@ class BaseParam():
             required=False,
             default=None,
             many=False,
+            validators=None
     ):
+        """Initialize parameter and verify default/required contraints."""
         self.label = label
         self.details = details
         self.required = required
         self.many = many
+        self.validators = validators or []
 
         if not (default is None) and not isinstance(default, str):
             raise TypeError(
@@ -100,12 +103,40 @@ class BaseParam():
             )
         self.default = default
 
-    def value(self, raw_value):
-        """
-        Raw value deserializtion method handler
+    def validated_value(self, raw_value):
+        """Return parsed parameter value and run validation handlers.
+
+        Error message included in exception will be included in http error
+        response
 
         Args:
-            raw_value (str) - raw value from GET parameters
+            value: raw parameter value to parse validate
+
+        Returns:
+            None
+
+        Note:
+            Concept of validation for params is understood here as a process
+            of checking if data of valid type (successfully parsed/processed by
+            ``.value()`` handler) does meet some other constraints
+            (lenght, bounds, uniqueness, etc.). It will internally call its
+            ``value()`` handler.
+
+        """
+        value = self.value(raw_value)
+        try:
+            for validator in self.validators:
+                validator(value)
+        except:
+            raise
+        else:
+            return value
+
+    def value(self, raw_value):
+        """Raw value deserialization method handler.
+
+        Args:
+            raw_value (str): raw value from GET parameters
 
         """
         raise NotImplementedError(

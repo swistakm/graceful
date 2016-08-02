@@ -160,6 +160,52 @@ codes using pycountry module:
                     "".format(code=raw_value)
                 )
 
+Parameter validation
+~~~~~~~~~~~~~~~~~~~~
+
+Custom parameters are great for defining new data types that can be passed
+through HTTP query string or handling very specific cases like country codes,
+mime types, or even database filters. Still it may be sometimes an overkill
+to define new parameter class to do something as simple as ensure min/max
+bounds for numeric value or define as set of allowed choices.
+
+All of basic parameters available in graceful accept ``validators`` keyword
+argument that accepts a list of validation functions. These function will be
+always called upon parameter retrieval. This functionality allows you to
+quickly extend the semantic of your parameters without the need of subclassing.
+
+A validator is any callable that accepts single positional argument
+that will be a value returned from call to the ``value()`` handler of parameter
+class. If validation funtion fails it is supposed to return
+:class:`graceful.errors.ValidationError` that will be later translated to
+proper HTTP error response. Following is example of simple validation function
+which ensures that parameter string is palindrome:
+
+.. code-block:: python
+
+    from graceful.resources.base import BaseResource
+    from graceful.parameters import StrParam
+    from graceful.errors import ValidationError
+
+    def is_palindrome(value):
+        if value != value[::-1]:
+            raise ValidationError("{} is not a palindrome")
+
+
+    class FamousPhrases(Resource):
+        palindrome_query = StrParam(
+            "Palindrome text query", validators=[is_palindrome]
+        )
+
+
+Validators always work on deserialized values and this allows to easily reuse
+the same code across different types of parameters and also between fields
+(see: :ref:`field-validation`). Graceful takes advantage of this fact and already
+provides you with a small set of fully reusable validators that can be used to
+validate both your parameters and serialization fields. For more details see
+:any:`graceful.validators` module reference.
+
+
 
 Handling multiple occurences of parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
