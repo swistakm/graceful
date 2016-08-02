@@ -27,9 +27,10 @@ def _retrieve_header(response, header):
     response.get_header() was introduced in falcon 1.0 but we want to retrieve
     response header values in al versions in consitent manner.
 
-    :param response: falcon.Request() instance
-    :param header: case-insensitive header name
-    :return: header value
+    Args:
+        response (falcon.Request): request object instance
+        header (str): case-insensitive header name
+
     """
     try:
         return response.get_header(header)
@@ -47,8 +48,12 @@ def test_base_resource_get(req, resp):
     Test that simple resource GET will return 200 OK response with JSON encoded
     body.
 
-    :param req: falcon.Request object provided by `req` pytest fixture
-    :param resp: falcon.Response object provided by`resp` pytest fixture
+    Args:
+        req (falcon.Request): request instance object provided by ``req``
+           pytest fixture
+
+        resp (falcon.Response): responce instance provided by ``resp`` pytest
+           fixture
     """
     resource = TestResource()
 
@@ -77,8 +82,11 @@ def test_resource_meta(req, resp):
     """
     Test if meta output part on resource GET has a desired structure
 
-    :param req: falcon.Request object provided by `req` pytest fixture
-    :param resp: falcon.Response object provided by`resp` pytest fixture
+    Args:
+        req (falcon.Request): request instance object provided by ``req``
+            pytest fixture
+        resp (falcon.Response): responce instance provided by ``resp`` pytest
+            fixture
     """
     resource = TestResource()
     resource.on_get(req, resp)
@@ -94,8 +102,11 @@ def test_required_params(req, resp):
     Test that when params are missing then specific falcon exception is raised
     and thus proper status code will be returned.
 
-    :param req: falcon.Request object provided by `req` pytest fixture
-    :param resp: falcon.Response object provided by`resp` pytest fixture
+    Args:
+        req (falcon.Request): request instance object provided by ``req``
+            pytest fixture
+        resp (falcon.Response): responce instance provided by ``resp`` pytest
+            fixture
     """
     class ParametrizedResource(TestResource):
         foo = StringParam(details="required foo!", required=True)
@@ -116,8 +127,11 @@ def test_resource_accepts_kwargs(req, resp):
     Test that on_get method accepts additional keyword arguments.
     This is important because allows passing of arguments from url template.
 
-    :param req: falcon.Request object provided by `req` pytest fixture
-    :param resp: falcon.Response object provided by`resp` pytest fixture
+    Args:
+        req (falcon.Request): request instance object provided by ``req``
+            pytest fixture
+        resp (falcon.Response): responce instance provided by ``resp`` pytest
+            fixture
     """
     resource = TestResource()
     resource.on_get(req, resp, foo='bar')
@@ -127,8 +141,11 @@ def test_describe(req, resp):
     """
     Test if output of resource.description() has desired form.
 
-    :param req: falcon.Request object provided by `req` pytest fixture
-    :param resp: falcon.Response object provided by`resp` pytest fixture
+    Args:
+        req (falcon.Request): request instance object provided by ``req``
+            pytest fixture
+        resp (falcon.Response): responce instance provided by ``resp`` pytest
+            fixture
     """
     # default description keys
     resource = Resource()
@@ -150,8 +167,11 @@ def test_options(resp):
     """
     Test that options is a json serialized output of resource.describe()
 
-    :param req: falcon.Request object provided by `req` pytest fixture
-    :param resp: falcon.Response object provided by`resp` pytest fixture
+    Args:
+        req (falcon.Request): request instance object provided by ``req``
+            pytest fixture
+        resp (falcon.Response): responce instance provided by ``resp`` pytest
+            fixture
     """
     # note: creating request is optional here since we bypass whole falcon
     #       routing and dispatching procedure

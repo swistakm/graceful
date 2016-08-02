@@ -13,11 +13,11 @@ from graceful.resources.mixins import (
 
 
 class Resource(RetrieveMixin, BaseResource):
-    """
-    Generic resource for single object retrieve type of endpoints without use
-    of automatic representation serialization and extensive field descriptions.
+    """Basic retrieval of resource instance lists without serialization.
 
-    This still gives support for defining parameters.
+    This resource class is intended for endpoints that do not require automatic
+    representation serialization and extensive field descriptions but still
+    gives support for defining parameters as resource class attributes.
 
     Example usage:
 
@@ -36,11 +36,11 @@ class Resource(RetrieveMixin, BaseResource):
 
 
 class ListResource(ListMixin, BaseResource):
-    """
-    Generic resource for list object type of endpoints without use of
-    automatic representation serialization and extensive field descriptions
+    """Basic retrieval of resource instance lists without serialization.
 
-    This still gives support for defining parameters.
+    This resource class is intended for endpoints that do not require automatic
+    representation serialization and extensive field descriptions but still
+    gives support for defining parameters as resource class attributes.
 
     Example usage:
 
@@ -56,11 +56,11 @@ class ListResource(ListMixin, BaseResource):
                 return [{"sample": "resource"}]
 
     """
-    pass
 
 
 class RetrieveAPI(RetrieveMixin, BaseResource):
-    """
+    """Generic Retrieve API with resource serialization.
+
     Generic resource that uses serializer for resource description,
     serialization and validation.
 
@@ -70,9 +70,11 @@ class RetrieveAPI(RetrieveMixin, BaseResource):
       method handler)
 
     """
+
     serializer = None
 
     def describe(self, req, resp, **kwargs):
+        """Extend default endpoint description with serializer description."""
         return super().describe(
             req, resp,
             type='object',
@@ -86,13 +88,15 @@ class RetrieveAPI(RetrieveMixin, BaseResource):
         )
 
     def on_get(self, req, resp, **kwargs):
+        """Respond on GET requests using ``self.retrieve()`` handler."""
         return super().on_get(
             req, resp, handler=self._retrieve, **kwargs
         )
 
 
 class RetrieveUpdateAPI(UpdateMixin, RetrieveAPI):
-    """
+    """Generic Retrieve/Update API with resource serialization.
+
     Generic resource that uses serializer for resource description,
     serialization and validation.
 
@@ -104,12 +108,14 @@ class RetrieveUpdateAPI(UpdateMixin, RetrieveAPI):
       (handled with ``.update()`` method handler)
 
     """
+
     def _update(self, params, meta, **kwargs):
         return self.serializer.to_representation(
             self.update(params, meta, **kwargs)
         )
 
     def on_put(self, req, resp, **kwargs):
+        """Respond on PUT requests using ``self.update()`` handler."""
         validated = self.require_validated(req)
         return super().on_put(
             req, resp,
@@ -119,7 +125,8 @@ class RetrieveUpdateAPI(UpdateMixin, RetrieveAPI):
 
 
 class RetrieveUpdateDeleteAPI(DeleteMixin, RetrieveUpdateAPI):
-    """
+    """Generic Retrieve/Update/Delete API with resource serialization.
+
     Generic resource that uses serializer for resource description,
     serialization and validation.
 
@@ -135,7 +142,8 @@ class RetrieveUpdateDeleteAPI(DeleteMixin, RetrieveUpdateAPI):
 
 
 class ListAPI(ListMixin, BaseResource):
-    """
+    """Generic List API with resource serialization.
+
     Generic resource that uses serializer for resource description,
     serialization and validation.
 
@@ -145,6 +153,7 @@ class ListAPI(ListMixin, BaseResource):
       with ``.list()`` method handler)
 
     """
+
     def _list(self, params, meta, **kwargs):
         return [
             self.serializer.to_representation(obj)
@@ -152,6 +161,7 @@ class ListAPI(ListMixin, BaseResource):
         ]
 
     def describe(self, req, resp, **kwargs):
+        """Extend default endpoint description with serializer description."""
         return super().describe(
             req, resp,
             type='list',
@@ -160,11 +170,13 @@ class ListAPI(ListMixin, BaseResource):
         )
 
     def on_get(self, req, resp, **kwargs):
+        """Respond on GET requests using ``self.list()`` handler."""
         return super().on_get(req, resp, handler=self._list, **kwargs)
 
 
 class ListCreateAPI(CreateMixin, ListAPI):
-    """
+    """Generic List/Create API with resource serialization.
+
     Generic resource that uses serializer for resource description,
     serialization and validation.
 
@@ -176,12 +188,14 @@ class ListCreateAPI(CreateMixin, ListAPI):
       (handled with ``.create()`` method handler)
 
     """
+
     def _create(self, params, meta, **kwargs):
         return self.serializer.to_representation(
             self.create(params, meta, **kwargs)
         )
 
     def on_post(self, req, resp, **kwargs):
+        """Respond on POST requests using ``self.create()`` handler."""
         validated = self.require_validated(req)
 
         return super().on_post(
@@ -192,7 +206,8 @@ class ListCreateAPI(CreateMixin, ListAPI):
 
 
 class PaginatedListAPI(PaginatedMixin, ListAPI):
-    """
+    """Generic List API with resource serialization and pagination.
+
     Generic resource that uses serializer for resource description,
     serialization and validation.
 
@@ -204,6 +219,7 @@ class PaginatedListAPI(PaginatedMixin, ListAPI):
       with ``.list()`` method handler)
 
     """
+
     def _list(self, params, meta, **kwargs):
         objects = super()._list(params, meta, **kwargs)
         # note: we need to populate meta after objects are retrieved
@@ -212,7 +228,8 @@ class PaginatedListAPI(PaginatedMixin, ListAPI):
 
 
 class PaginatedListCreateAPI(PaginatedMixin, ListCreateAPI):
-    """
+    """Generic List/Create API with resource serialization and pagination.
+
     Generic resource that uses serializer for resource description,
     serialization and validation.
 
@@ -226,6 +243,7 @@ class PaginatedListCreateAPI(PaginatedMixin, ListCreateAPI):
       (handled with ``.create()`` method handler)
 
     """
+
     def _list(self, params, meta, **kwargs):
         objects = super()._list(
             params, meta, **kwargs

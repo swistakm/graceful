@@ -3,27 +3,29 @@ from falcon import HTTPBadRequest
 
 
 class DeserializationError(ValueError):
-    """
-    Raised when error happened during deserialization of object
-    """
+    """Raised when error happened during deserialization of representation."""
+
     def __init__(
             self, missing=None, forbidden=None, invalid=None, failed=None
     ):
+        """Initialize exception instance."""
         self.missing = missing
         self.forbidden = forbidden
         self.invalid = invalid
         self.failed = failed
 
     def as_bad_request(self):
+        """Translate this error to falcon's HTTP specific error exception."""
         return HTTPBadRequest(
             title="Representation deserialization failed",
             description=self._get_description()
         )
 
     def _get_description(self):
-        """
-        Return human readable description that explains everything that
-        went wrong with deserialization.
+        """Return human readable description error description.
+
+        This description should explain everything that went wrong during
+        deserialization.
 
         """
         return ", ".join([
@@ -43,9 +45,18 @@ class DeserializationError(ValueError):
 
 
 class ValidationError(ValueError):
-    """Raised when validation error occured"""
+    """Raised when validation error occured."""
+
     def as_bad_request(self):
+        """Translate this error to falcon's HTTP specific error exception.
+
+        Note:
+            Exceptions returned by this method should be used to inform about
+            resource validation failures. In case of param validation
+            failures the ``as_invalid_param()`` method should be used.
+
+        """
         return HTTPBadRequest(
-            title="Validation failed deserialization failed",
+            title="Validation failed",
             description=str(self)
         )

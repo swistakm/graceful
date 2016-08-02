@@ -81,11 +81,12 @@ def _test_param(param, encoded, invalid, desired):
     * check if decoded value is same as desired
     * check if decoding invalid value raises ValueError
 
-    :param param: param object
-    :param encoded:
-    :param invalid:
-    :param desired: desired value after value desi
-    :return:
+    Args:
+        param (BaseParam): parameter class instance
+        encoded (string): valid raw encoded parameter value string
+        invalid (string): invalid raw encoded parameter value string
+        desired: desired value after decoding the ``encoded`` value with
+            parameter class instance
     """
     assert param.value(encoded) == desired
 

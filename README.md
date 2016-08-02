@@ -215,10 +215,10 @@ Any contribution is welcome. Issues, suggestions, pull requests - whatever.
 There is only short set of rules that guide this project development you
 should be aware of before submitting a pull request:
 
-* only requests that have passing CI builds (Travis) will be merged
-* code is checked with flakes8 during build so this implicitely means that
-  PEP-8 is a must
-* no changes that decrease coverage will be merged
+* Only requests that have passing CI builds (Travis) will be merged.
+* Code is checked with `flakes8` and `pydocstyle` during build so this
+  implicitely means that compliance with PEP-8 and PEP-257 are mandatory.
+* No changes that decrease coverage will be merged.
 
 One thing: if you submit a PR please do not rebase it later unless you
 are asked for that explicitely. Reviewing pull requests that suddenly had 
@@ -227,4 +227,4 @@ their history rewritten just drives me crazy.
 
 # license
 
-See `LICENSE` file
+See `LICENSE` file.

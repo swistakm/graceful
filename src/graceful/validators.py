@@ -4,17 +4,19 @@ import re
 from graceful.errors import ValidationError
 
 
-__all__ = [
+__all__ = (
     'min_validator',
     'max_validator',
     'choices_validator',
-]
+    'match_validator',
+)
 
 
 def min_validator(min_value):
-    """
-    Return validator function that will check internal value with
-    ``value >= min_value`` check
+    """Return validator function that ensures lower bound of a number.
+
+    Result validation function will validate the internal value of resource
+    instance field with the ``value >= min_value`` check
 
     Args:
         min_value: minimal value for new validator
@@ -28,8 +30,10 @@ def min_validator(min_value):
 
 
 def max_validator(max_value):
-    """
-    Return validator function that will check if ``value >= min_value``.
+    """Return validator function that ensures upper bound of a number.
+
+    Result validation function will validate the internal value of resource
+    instance field with the ``value >= min_value`` check.
 
     Args:
         max_value: maximum value for new validator
@@ -43,8 +47,7 @@ def max_validator(max_value):
 
 
 def choices_validator(choices):
-    """
-    Return validator function that will check if ``value in choices``.
+    """Return validator function that will check if ``value in choices``.
 
     Args:
         max_value (list, set, tuple): allowed choices for new validator
@@ -61,8 +64,7 @@ def choices_validator(choices):
 
 
 def match_validator(expression):
-    """
-    Return validator function that will check if matches given match.
+    """Return validator function that will check if matches given expression.
 
     Args:
         match: if string then this will be converted to regular expression
@@ -71,7 +73,6 @@ def match_validator(expression):
            matching object/class.
 
     """
-
     if isinstance(expression, str):
         compiled = re.compile(expression)
     elif hasattr(expression, 'match'):

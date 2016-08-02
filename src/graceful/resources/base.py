@@ -12,14 +12,14 @@ from graceful.errors import DeserializationError, ValidationError
 
 
 class MetaResource(type):
-    """ Metaclass for handling parametrization with parameter objects
-    """
+    """Metaclass for handling parametrization with parameter objects."""
+
     _params_storage_key = '_params'
 
     @classmethod
     def __prepare__(mcs, name, bases, **kwargs):
-        """
-        Prepare class namespace in a way that ensures order of attributes.
+        """Prepare class namespace in a way that ensures order of attributes.
+
         This needs to be an `OrderedDict` so `_get_params()` method can
         construct params storage that preserves the same order of parameters
         as defined in code.
@@ -37,7 +37,9 @@ class MetaResource(type):
 
     @classmethod
     def _get_params(mcs, bases, namespace):
-        """ Pop all parameter objects from attributes dict (namespace)
+        """Create params dictionary to be used in resource class namespace.
+
+        Pop all parameter objects from attributes dict (namespace)
         and store them under _params_storage_key atrribute.
         Also collect all params from base classes in order that ensures
         params can be overriden.
@@ -63,6 +65,7 @@ class MetaResource(type):
         return OrderedDict(params)
 
     def __new__(mcs, name, bases, namespace):
+        """Create new class object instance and alter its namespace."""
         namespace[mcs._params_storage_key] = mcs._get_params(bases, namespace)
 
         return super().__new__(
@@ -73,11 +76,14 @@ class MetaResource(type):
 
 
 class BaseResource(metaclass=MetaResource):
+    """Base resouce class with core param and response functionality.
+
+    This base class handles resource responses, parameter deserialization,
+    and validation of request included representations if serializer is
+    defined.
+
     """
-    Base Resouce class for handling resource responses, parameter
-    deserialization and validation of request included representations if
-    serializer is defined.
-    """
+
     indent = IntParam(
         """
         JSON output indentation. Set to 0 if output should not be formated.
@@ -89,23 +95,20 @@ class BaseResource(metaclass=MetaResource):
 
     @property
     def params(self):
-        """
-        Dictionary of parameter meta-objects.
-        """
+        """Return dictionary of parameter definition objects."""
         return getattr(self, self.__class__._params_storage_key)
 
     def make_body(self, resp, params, meta, content):
-        """
-        Make response body in ``resp`` object using JSON serialization
+        """Construct response body in ``resp`` object using JSON serialization.
 
         Args:
             resp (falcon.Response): response object where to include
-               serialized body
+                serialized body
             params (dict): dictionary of parsed parameters
             meta (dict): dictionary of metadata to be included in 'meta'
-               section of response
+                section of response
             content (dict): dictionary of response content (resource
-               representation) to be included in 'content' section of response
+                representation) to be included in 'content' section of response
 
         Returns:
             None
@@ -122,9 +125,9 @@ class BaseResource(metaclass=MetaResource):
         )
 
     def allowed_methods(self):
-        """
-        Return list of allowed methods on this resource. This is only for
-        purpose of making resource description.
+        """Return list of allowed HTTP methods on this resource.
+
+        This is only for purpose of making resource description.
 
         Returns:
             list: list of allowed HTTP method names (uppercase)
@@ -143,12 +146,10 @@ class BaseResource(metaclass=MetaResource):
         ]
 
     def describe(self, req, resp, **kwargs):
-        """
-        Describe API resource using class introspection, self-describing
-        serializer and current request object (for resource guessing path)
+        """Describe API resource using resource introspection.
 
         Additional description on derrived resource class can be added using
-        keyword arguments and calling super().decribe() method call
+        keyword arguments and calling ``super().decribe()`` method call
         like following:
 
         .. code-block:: python
@@ -163,7 +164,7 @@ class BaseResource(metaclass=MetaResource):
             req (falcon.Request): request object
             resp (falcon.Response): response object
             kwargs (dict): dictionary of values created from resource url
-               template
+                template
 
         Returns:
             dict: dictionary with resource descritpion information
@@ -187,14 +188,13 @@ class BaseResource(metaclass=MetaResource):
         return description
 
     def on_options(self, req, resp, **kwargs):
-        """
-        Respond with JSON formatted resource description.
+        """Respond with JSON formatted resource description on OPTIONS request.
 
         Args:
             req (falcon.Request): request object
             resp (falcon.Response): response object
             kwargs (dict): dictionary of values created by falcon from
-               resource url template
+                resource url template
 
 
         Returns:
@@ -206,8 +206,7 @@ class BaseResource(metaclass=MetaResource):
         resp.content_type = 'application/json'
 
     def require_params(self, req):
-        """
-        Require all parameters from request that are defined for this resource.
+        """Require all defined parameters from request query string.
 
         Raises ``falcon.errors.HTTPMissingParam`` exception if any of required
         parameters is missing and ``falcon.errors.HTTPInvalidParam`` if any
@@ -217,7 +216,6 @@ class BaseResource(metaclass=MetaResource):
             req (falcon.Request): request object
 
         """
-        # TODO: handle specifying parameter multiple times in query string!
         params = {}
 
         for name, param in self.params.items():
@@ -262,21 +260,19 @@ class BaseResource(metaclass=MetaResource):
         return params
 
     def require_meta_and_content(self, content_handler, params, **kwargs):
-        """
-        Require 'meta' and 'content' dictionaries using given
-        ``content_handler``.
+        """Require 'meta' and 'content' dictionaries using proper hander.
 
         Args:
             content_handler (callable): function that accepts
-               ``params, meta, **kwargs`` argument and returns dictionary
-               for ``content`` response section
+                ``params, meta, **kwargs`` argument and returns dictionary
+                for ``content`` response section
             params (dict): dictionary of parsed resource parameters
             kwargs (dict): dictionary of values created from resource url
-               template
+                template
 
         Returns:
             tuple (meta, content): two-tuple with dictionaries of ``meta`` and
-            ``content`` response sections
+                ``content`` response sections
 
         """
         meta = {
@@ -287,9 +283,13 @@ class BaseResource(metaclass=MetaResource):
         return meta, content
 
     def require_representation(self, req):
-        """
-        Require raw representation from falcon request object. This does not
-        perform any field parsing or validation.
+        """Require raw representation dictionary from falcon request object.
+
+        This does not perform any field parsing or validation but only uses
+        allowed content-encoding handler to decode content body.
+
+        Note:
+            Currently only JSON is allowed as content type.
 
         Args:
             req (falcon.Request): request object
@@ -317,22 +317,23 @@ class BaseResource(metaclass=MetaResource):
             )
 
     def require_validated(self, req, partial=False):
-        """
-        Require fully validated internal object dict based on representation
-        sent in request body.
+        """Require fully validated internal object dictionary.
+
+        Internal object dictionary creation is based on content-decoded
+        representation retrieved from request body. Internal object validation
+        is performed using resource serializer.
 
         Args:
             req (falcon.Request): request object
             partial (bool): self to True if partially complete representation
-               is accepted (e.g. for patching instead of full update). Missing
-               fields in representation will be skiped.
+                is accepted (e.g. for patching instead of full update). Missing
+                fields in representation will be skiped.
 
         Returns:
             dict: dictionary of fields and values representing internal object.
-            Each value is a result of ``field.from_representation`` call.
+                Each value is a result of ``field.from_representation`` call.
 
         """
-
         representation = self.require_representation(req)
 
         try:

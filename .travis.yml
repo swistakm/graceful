@@ -18,6 +18,7 @@ env:
   # linters and coverage
   - TOX_ENV=pep8
   - TOX_ENV=coverage
+  - TOX_ENV=pep257
 
 script:
   - tox -e $TOX_ENV

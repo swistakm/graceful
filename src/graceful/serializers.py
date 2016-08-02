@@ -7,15 +7,15 @@ from graceful.fields import BaseField
 
 
 class MetaSerializer(type):
-    """ Metaclass for handling serialization with field objects
-    """
+    """Metaclass for handling serialization with field objects."""
+
     _fields_storage_key = '_fields'
 
     @classmethod
     def __prepare__(mcs, name, bases, **kwargs):
-        """
-        Prepare class namespace in a way that ensures order of attributes.
-        This needs to be an `OrderedDict` so `_get_params()` method can
+        """Prepare class namespace in a way that ensures order of attributes.
+
+        This needs to be an `OrderedDict` so `_get_fields()` method can
         construct fields storage that preserves the same order of fields as
         defined in code.
 
@@ -28,10 +28,11 @@ class MetaSerializer(type):
 
     @classmethod
     def _get_fields(mcs, bases, namespace):
-        """ Pop all field objects from attributes dict (namespace)
-        and store them under _field_storage_key atrribute.
-        Also collect all fields from base classes in order that ensures
-        fields can be overriden.
+        """Create fields dictionary to be used in resource class namespace.
+
+        Pop all field objects from attributes dict (namespace) and store them
+        under _field_storage_key atrribute. Also collect all fields from base
+        classes in order that ensures fields can be overriden.
 
         Args:
             bases: all base classes of created serializer class
@@ -54,6 +55,7 @@ class MetaSerializer(type):
         return OrderedDict(fields)
 
     def __new__(mcs, name, bases, namespace):
+        """Create new class object instance and alter its namespace."""
         namespace[mcs._fields_storage_key] = mcs._get_fields(bases, namespace)
         return super().__new__(
             # note: there is no need preserve order in namespace anymore so
@@ -63,8 +65,7 @@ class MetaSerializer(type):
 
 
 class BaseSerializer(metaclass=MetaSerializer):
-    """
-    Base serializer class for describing internal object serialization
+    """Base serializer class for describing internal object serialization.
 
     Example:
 
@@ -83,16 +84,14 @@ class BaseSerializer(metaclass=MetaSerializer):
 
     @property
     def fields(self):
-        """
-        Dictionary of field objects defined for this resource serialization
-        """
+        """Return dictionary of field definition objects of this serializer."""
         return getattr(self, self.__class__._fields_storage_key)
 
     def to_representation(self, obj):
-        """
-        Convert given internal object instance into defined representation
-        that will be later serialized to content-type of use in resource
-        http method handler.
+        """Convert given internal object instance into representation dict.
+
+        Representation dict may be later serialized to the content-type
+        of choice in the resource HTTP method handler.
 
         This loops over all fields and retrieves source keys/attributes as
         field values with respect to optional field sources and converts each
@@ -125,9 +124,10 @@ class BaseSerializer(metaclass=MetaSerializer):
         return representation
 
     def from_representation(self, representation):
-        """
-        Convert given representation dict into dictionary of internal object
-        values with respect to field sources.
+        """Convert given representation dict into internal object.
+
+        Internal object is simply a dictionary of values with respect to field
+        sources.
 
         This does not check if all required fields exist or values are
         valid in terms of value validation
@@ -144,9 +144,9 @@ class BaseSerializer(metaclass=MetaSerializer):
 
         Raises:
             DeserializationError: when at least one representation field
-               is not formed as expected by field object. Information
-               about additional forbidden/missing/invalid fields is provided
-               as well.
+                is not formed as expected by field object. Information
+                about additional forbidden/missing/invalid fields is provided
+                as well.
 
         """
         object_dict = {}
@@ -181,9 +181,10 @@ class BaseSerializer(metaclass=MetaSerializer):
         return object_dict
 
     def validate(self, object_dict, partial=False):
-        """
-        Validate given internal object agains missing/forbidden/invalid
-        fields values using fields definitions defined in serializer.
+        """Validate given internal object returned by ``to_representation()``.
+
+        Internal object is validated against missing/forbidden/invalid fields
+        values using fields definitions defined in serializer.
 
         Args:
             object_dict (dict): internal object dictionart to perform
@@ -196,7 +197,6 @@ class BaseSerializer(metaclass=MetaSerializer):
             DeserializationError:
 
         """
-
         # we are working on object_dict not an representation so there
         # is a need to annotate sources differently
         sources = {
@@ -230,9 +230,10 @@ class BaseSerializer(metaclass=MetaSerializer):
             raise DeserializationError(missing, forbidden, invalid)
 
     def get_attribute(self, obj, attr):
-        """
-        Get attribute from given object instance where 'attribute' can
-        be also a key from object if is a dict or any kind of mapping
+        """Get attribute of given object instance.
+
+        Reason for existence of this method is the fact that  'attribute' can
+        be also object's key from if is a dict or any other kind of mapping.
 
         Note: it will return None if attribute key does not exist
 
@@ -255,9 +256,10 @@ class BaseSerializer(metaclass=MetaSerializer):
         return getattr(obj, attr, None)
 
     def set_attribute(self, obj, attr, value):
-        """
-        Set attribute in given object instance where 'attribute' can
-        be also a key from object if it is a dict or any kind of mapping
+        """Set value of attribute in given object instance.
+
+        Reason for existence of this method is the fact that 'attribute' can
+        be also a object's key if it is a dict or any other kind of mapping.
 
         Args:
             obj (object): object instance to modify
@@ -272,10 +274,11 @@ class BaseSerializer(metaclass=MetaSerializer):
             setattr(obj, attr, value)
 
     def describe(self):
-        """
-        Describe whole all fields defined for this serializer using their own
-        descriptions with respect to order in which they are defined as class
-        attributes.
+        """Describe all serialized fields.
+
+        It returns dictionary of all fields description defined for this
+        serializer using their own ``describe()`` methods with respect to order
+        in which they are defined as class attributes.
 
         Returns:
             OrderedDict: serializer description

@@ -27,8 +27,9 @@ def index_error_as_404(fun):
     """
     Helper decorator that treats all IndexErrors as HTTP 404 Not Found
 
-    :param fun: function/method to wrap
-    :return:
+    Args:
+        fun: function/method to wrap
+
     """
     @wraps(fun)
     def resource_handler(*args, **kwargs):

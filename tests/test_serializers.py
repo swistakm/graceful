@@ -199,7 +199,6 @@ def test_serializer_get_attribute():
 def test_serializer_source_wildcard():
     """
     Test that '*' wildcard causes whole instance is returned on get attribute
-    :return:
     """
     serializer = BaseSerializer()
 
@@ -222,7 +221,6 @@ def test_serializer_source_field_with_wildcard():
 
 def test_serializer_describe():
     """ Test that serializers are self-describing
-    :return:
     """
     class ExampleSerializer(BaseSerializer):
         foo = TestField(label='foo', details='foo foo')

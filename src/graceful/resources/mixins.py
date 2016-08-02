@@ -5,8 +5,32 @@ from graceful.resources.base import BaseResource
 
 
 class BaseMixin():
-    """Base mixin class"""
+    """Base mixin class."""
+
     def handle(self, handler, req, resp, **kwargs):
+        """Handle given resource manipulation flow in consistent manner.
+
+        This mixin is intended to be used only as a base class in new flow
+        mixin classes. It ensures that regardless of resource manunipulation
+        semantics (retrieve, get, delete etc.) the flow is always the same:
+
+        1. Decode and validate all request parameters from the query string
+           using ``self.require_params()`` method.
+        2. Use ``self.require_meta_and_content()`` method to construct ``meta``
+           and ``content`` dictionaries that will be later used to create
+           serialized response body.
+        3. Construct serialized response body using ``self.body()`` method.
+
+        Args:
+             handler (method): resource manipulation method handler.
+             req (falcon.Request): request object instance.
+             resp (falcon.Response): response object instance to be modified.
+             **kwargs: additional keyword arguments retrieved from url
+                 template.
+
+        Returns:
+             Content dictionary (preferably resource representation).
+        """
         params = self.require_params(req)
 
         meta, content = self.require_meta_and_content(
@@ -17,27 +41,24 @@ class BaseMixin():
 
 
 class RetrieveMixin(BaseMixin):
-    """
-    Add retrieve capabilities to resource with GET requests.
-    """
+    """Add default "retrieve flow on GET" to any resource class."""
 
     def retrieve(self, params, meta, **kwargs):
-        """
-        Retrieve object method handler
+        """Retrieve existing resource instance and return its representation.
 
         Value returned by this handler will be included in response
         'content' section.
 
         Args:
             params (dict): dictionary of parsed parameters accordingly
-               to definitions provided as resource class atributes.
+                to definitions provided as resource class atributes.
             meta (dict): dictionary of meta parameters anything added
-               to this dict will will be later included in response
-               'meta' section. This can already prepopulated by method
-               that calls this handler.
-            kwargs (dict): dictionary of values retrieved from route url
-               template by falcon. This is suggested way for providing
-               resource identifiers.
+                to this dict will will be later included in response
+                'meta' section. This can already prepopulated by method
+                that calls this handler.
+            **kwargs: dictionary of values retrieved from route url
+                template by falcon. This is suggested way for providing
+                resource identifiers.
 
 
         Returns:
@@ -47,19 +68,32 @@ class RetrieveMixin(BaseMixin):
         raise NotImplementedError("retrieve method not implemented")
 
     def on_get(self, req, resp, handler=None, **kwargs):
+        """Respond on GET HTTP request assuming resource retrieval flow.
+
+        This request handler assumes that GET requests are associated with
+        single resource instance retrieval. Thus default flow for such requests
+        is:
+
+        * Retrieve single resource instance of prepare its representation by
+          calling retrieve method handler.
+
+        Args:
+            req (falcon.Request): request object instance.
+            resp (falcon.Response): response object instance to be modified
+            handler (method): list method handler to be called. Defaults
+                to ``self.list``.
+            **kwargs: additional keyword arguments retrieved from url template.
+        """
         self.handle(
             handler or self.retrieve, req, resp, **kwargs
         )
 
 
 class ListMixin(BaseMixin):
-    """
-    Add list capabilities to resource with GET requests.
-    """
+    """Add default "list flow on GET" to any resource class."""
 
     def list(self, params, meta, **kwargs):
-        """
-        List objects method handler
+        """List existing resource instances and return their representations.
 
         Value returned by this handler will be included in response
         'content' section.
@@ -71,7 +105,7 @@ class ListMixin(BaseMixin):
                to this dict will will be later included in response
                'meta' section. This can already prepopulated by method
                that calls this handler.
-            kwargs (dict): dictionary of values retrieved from route url
+            **kwargs: dictionary of values retrieved from route url
                template by falcon. This is suggested way for providing
                resource identifiers.
 
@@ -83,19 +117,31 @@ class ListMixin(BaseMixin):
         raise NotImplementedError("list method not implemented")
 
     def on_get(self, req, resp, handler=None, **kwargs):
+        """Respond on GET HTTP request assuming resource list retrieval flow.
+
+        This request handler assumes that GET requests are associated with
+        resource list retrieval. Thus default flow for such requests is:
+
+        * Retrieve list of existing resource instances and prepare their
+          representations by calling list retrieval method handler.
+
+        Args:
+            req (falcon.Request): request object instance.
+            resp (falcon.Response): response object instance to be modified
+            handler (method): list method handler to be called. Defaults
+                to ``self.list``.
+            **kwargs: additional keyword arguments retrieved from url template.
+        """
         self.handle(
             handler or self.list, req, resp, **kwargs
         )
 
 
 class DeleteMixin(BaseMixin):
-    """
-    Add delete capabilities to resource with DELETE requests.
-    """
+    """Add default "delete flow on DELETE" to any resource class."""
 
     def delete(self, params, meta, **kwargs):
-        """
-        Delete object method handler
+        """Delete existing resource instance.
 
         Args:
             params (dict): dictionary of parsed parameters accordingly
@@ -104,7 +150,7 @@ class DeleteMixin(BaseMixin):
                to this dict will will be later included in response
                'meta' section. This can already prepopulated by method
                that calls this handler.
-            kwargs (dict): dictionary of values retrieved from route url
+            **kwargs: dictionary of values retrieved from route url
                template by falcon. This is suggested way for providing
                resource identifiers.
 
@@ -115,6 +161,21 @@ class DeleteMixin(BaseMixin):
         raise NotImplementedError("delete method not implemented")
 
     def on_delete(self, req, resp, handler=None, **kwargs):
+        """Respond on DELETE HTTP request assuming resource deletion flow.
+
+        This request handler assumes that DELETE requests are associated with
+        resource deletion. Thus default flow for such requests is:
+
+        * Delete existing resource instance.
+        * Set response status code to ``202 Accepted``.
+
+        Args:
+            req (falcon.Request): request object instance.
+            resp (falcon.Response): response object instance to be modified
+            handler (method): deletion method handler to be called. Defaults
+                to ``self.delete``.
+            **kwargs: additional keyword arguments retrieved from url template.
+        """
         self.handle(
             handler or self.delete, req, resp, **kwargs
         )
@@ -123,27 +184,24 @@ class DeleteMixin(BaseMixin):
 
 
 class UpdateMixin(BaseMixin):
-    """
-    Add update capabilities to resource with PUT requests.
-    """
+    """Add default "update flow on PUT" to any resource class."""
 
     def update(self, params, meta, **kwargs):
-        """
-        Update object method handler
+        """Update existing resource instance and return its representation.
 
         Value returned by this handler will be included in response
         'content' section.
 
         Args:
             params (dict): dictionary of parsed parameters accordingly
-               to definitions provided as resource class atributes.
+                to definitions provided as resource class atributes.
             meta (dict): dictionary of meta parameters anything added
-               to this dict will will be later included in response
-               'meta' section. This can already prepopulated by method
-               that calls this handler.
-            kwargs (dict): dictionary of values retrieved from route url
-               template by falcon. This is suggested way for providing
-               resource identifiers.
+                to this dict will will be later included in response
+                'meta' section. This can already prepopulated by method
+                that calls this handler.
+            **kwargs: dictionary of values retrieved from route url
+                template by falcon. This is suggested way for providing
+                resource identifiers.
 
         Returns:
             value to be included in response 'content' section
@@ -152,6 +210,22 @@ class UpdateMixin(BaseMixin):
         raise NotImplementedError("update method not implemented")
 
     def on_put(self, req, resp, handler=None, **kwargs):
+        """Respond on PUT HTTP request assuming resource update flow.
+
+        This request handler assumes that PUT requests are associated with
+        resource update/modification. Thus default flow for such requests is:
+
+        * Modify existing resource instance and prepare its representation by
+          calling its update method handler.
+        * Set response status code to ``202 Accepted``.
+
+        Args:
+            req (falcon.Request): request object instance.
+            resp (falcon.Response): response object instance to be modified
+            handler (method): update method handler to be called. Defaults
+                to ``self.update``.
+            **kwargs: additional keyword arguments retrieved from url template.
+        """
         self.handle(
             handler or self.update, req, resp, **kwargs
         )
@@ -159,26 +233,25 @@ class UpdateMixin(BaseMixin):
 
 
 class CreateMixin(BaseMixin):
-    """
-    Add create capabilities to resource with POST requests.
-    """
-    def create(self, params, meta, **kwargs):
-        """
-        Create object method handler
+    """Add default "creation flow on POST" to any resource class."""
 
-        Value returned by this handler will be included in response
-        'content' section.
+    def create(self, params, meta, **kwargs):
+        """Create new resource instance and return its representation.
+
+        This is default resource instance creation method. Value returned
+        is the representation of single resource instance. It will be included
+        in the 'content' section of response body.
 
         Args:
             params (dict): dictionary of parsed parameters accordingly
-               to definitions provided as resource class atributes.
+                to definitions provided as resource class atributes.
             meta (dict): dictionary of meta parameters anything added
-               to this dict will will be later included in response
-               'meta' section. This can already prepopulated by method
-               that calls this handler.
+                to this dict will will be later included in response
+                'meta' section. This can already prepopulated by method
+                that calls this handler.
             kwargs (dict): dictionary of values retrieved from route url
-               template by falcon. This is suggested way for providing
-               resource identifiers.
+                template by falcon. This is suggested way for providing
+                resource identifiers.
 
 
         Returns:
@@ -188,15 +261,33 @@ class CreateMixin(BaseMixin):
         raise NotImplementedError("create method not implemented")
 
     def get_object_location(self, obj):
-        """
-        Return location path that will be included as Location header.
+        """Return location URI associated with given resource representation.
 
-        This handler is optional.
-
+        This handler is optional. Returned URI will be included as the
+        value of ``Location`` header on POST responses.
         """
         raise NotImplementedError("update method not implemented")
 
     def on_post(self, req, resp, handler=None, **kwargs):
+        """Respond on POST HTTP request assuming resource creation flow.
+
+        This request handler assumes that POST requests are associated with
+        resource creation. Thus default flow for such requests is:
+
+        * Create new resource instance and prepare its representation by
+          calling its creation method handler.
+        * Try to retrieve URI of newly created object using
+          ``self.get_object_location()``. If it succeeds use that URI as the
+          value of ``Location`` header in response object instance.
+        * Set response status code to ``201 Created``.
+
+        Args:
+            req (falcon.Request): request object instance.
+            resp (falcon.Response): response object instance to be modified
+            handler (method): creation method handler to be called. Defaults
+                to ``self.create``.
+            **kwargs: additional keyword arguments retrieved from url template.
+        """
         obj = self.handle(
             handler or self.create, req, resp, **kwargs
         )
@@ -209,8 +300,7 @@ class CreateMixin(BaseMixin):
 
 
 class PaginatedMixin(BaseResource):
-    """
-    Add simple pagination capabilities to resource.
+    """Add simple pagination capabilities to resource.
 
     This class provides two additional parameters with some default
     descriptions and ``add_pagination_meta`` method that can update
@@ -233,6 +323,7 @@ class PaginatedMixin(BaseResource):
                 # ...
 
     """
+
     page_size = IntParam(
         details="""Specifies number of result entries in single response""",
         default='10'
@@ -244,6 +335,18 @@ class PaginatedMixin(BaseResource):
     )
 
     def add_pagination_meta(self, params, meta):
+        """Extend default meta dictionary value with pagination hints.
+
+        Note:
+            This method handler attaches values to ``meta`` dictionary without
+            changing it's reference. This means that you should never replace
+            ``meta`` dictionary with any other dict instance but simply modify
+            its content.
+
+        Args:
+            params (dict): dictionary of decoded parameter values
+            meta (dict): dictionary of meta values attached to response
+        """
         meta['page_size'] = params['page_size']
         meta['page'] = params['page']
 
