@@ -12,3 +12,4 @@ Graceful guide
    parameters
    serializers
    content-types
+   documenting-your-api
