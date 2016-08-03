@@ -264,7 +264,7 @@ def test_parameter_with_many_and_required():
 
 
 @pytest.mark.parametrize(
-    'query_string', ['number=10', 'number=10', 'number=10']
+    'query_string', ['number=10', 'number=15', 'number=20']
 )
 def test_parameter_with_validation_enabled_passes(query_string):
     class SomeResource(Resource):
