@@ -186,7 +186,7 @@ class BaseResource(metaclass=MetaResource):
         # note: add path to resource description only if request object was
         #       provided in order to make auto-documentation engines simpler
         if req:
-            description['path'] = req.path,
+            description['path'] = req.path
 
         description.update(**kwargs)
         return description
