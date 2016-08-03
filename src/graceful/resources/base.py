@@ -145,7 +145,7 @@ class BaseResource(metaclass=MetaResource):
             ) if allowed
         ]
 
-    def describe(self, req, resp, **kwargs):
+    def describe(self, req=None, resp=None, **kwargs):
         """Describe API resource using resource introspection.
 
         Additional description on derrived resource class can be added using
@@ -180,10 +180,14 @@ class BaseResource(metaclass=MetaResource):
                     self.__class__.__doc__ or
                     "This resource does not have description yet"
                 ),
-            'path': req.path,
             'name': self.__class__.__name__,
             'methods': self.allowed_methods()
         }
+        # note: add path to resource description only if request object was
+        #       provided in order to make auto-documentation engines simpler
+        if req:
+            description['path'] = req.path
+
         description.update(**kwargs)
         return description
 
@@ -191,11 +195,10 @@ class BaseResource(metaclass=MetaResource):
         """Respond with JSON formatted resource description on OPTIONS request.
 
         Args:
-            req (falcon.Request): request object
-            resp (falcon.Response): response object
-            kwargs (dict): dictionary of values created by falcon from
-                resource url template
-
+            req (falcon.Request): Optional request object. Defaults to None.
+            resp (falcon.Response): Optional response object. Defaults to None.
+            kwargs (dict): Dictionary of values created by falcon from
+                resource uri template.
 
         Returns:
             None

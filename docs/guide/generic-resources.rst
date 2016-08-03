@@ -297,9 +297,9 @@ decide to use it:
 
 .. note::
 
-    If you don't like anything about little opinionated meta that paginated
-    generic resources provide you can olways override it with
-    ``.add_pagination_meta(params, meta)`` method handler.
+    If you don't like anything about this opinionated meta section that
+    paginated generic resources provide, you can always override it with
+    own ``add_pagination_meta(params, meta)`` method handler.
 
 
 Generic resources without serialization

@@ -73,7 +73,7 @@ class RetrieveAPI(RetrieveMixin, BaseResource):
 
     serializer = None
 
-    def describe(self, req, resp, **kwargs):
+    def describe(self, req=None, resp=None, **kwargs):
         """Extend default endpoint description with serializer description."""
         return super().describe(
             req, resp,
@@ -160,7 +160,7 @@ class ListAPI(ListMixin, BaseResource):
             for obj in self.list(params, meta, **kwargs)
         ]
 
-    def describe(self, req, resp, **kwargs):
+    def describe(self, req=None, resp=None, **kwargs):
         """Extend default endpoint description with serializer description."""
         return super().describe(
             req, resp,

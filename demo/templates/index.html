@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Cats API</title>
+</head>
+<body>
+
+<h1>Cats API documentation</h1>
+
+<p> Welcome to Cats API documentation </p>
+
+{% for uri, endpoint in endpoints.items() %}
+    <h2>{{ endpoint.name }}: <code>{{ uri }}</code></h2>
+
+    <p>
+        <strong>Accepted methods:</strong>
+        <code>{{ endpoint.methods }}</code>
+    </p>
+
+    <p> {{ endpoint.details }}</p>
+
+    <h3>Accepted params</h3>
+    {% if endpoint.params %}
+        <ul>
+            {% for name, param in endpoint.params.items() %}
+            <li>{{ name }} ({{ param.type }}): {{ param.details }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h3>Accepted fields</h3>
+    {% if endpoint.fields %}
+        <ul>
+            {% for name, field in endpoint.fields.items() %}
+            <li>{{ name }} ({{ field.type }}): {{ field.details }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endfor %}
+</body>
+</html>
