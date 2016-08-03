@@ -2,7 +2,7 @@
 import falcon
 
 from graceful.serializers import BaseSerializer
-from graceful.fields import IntField, RawField
+from graceful.fields import IntField, StringField
 from graceful.parameters import StringParam
 from graceful.errors import ValidationError
 from graceful.resources.generic import (
@@ -10,7 +10,11 @@ from graceful.resources.generic import (
     PaginatedListCreateAPI,
 )
 
-api = application = falcon.API()
+from jinja2 import Environment, FileSystemLoader
+
+# environment allows us to load template files, 'templates' is a dir
+# where we want to store them
+env = Environment(loader=FileSystemLoader('templates'))
 
 # lets pretend that this is our backend storage
 CATS_STORAGE = [
@@ -32,8 +36,8 @@ def is_lower_case(value):
 # this is how we represent cats in our API
 class CatSerializer(BaseSerializer):
     id = IntField("cat identification number", read_only=True)
-    name = RawField("cat name", validators=[is_lower_case])
-    breed = RawField("official breed name")
+    name = StringField("cat name", validators=[is_lower_case])
+    breed = StringField("official breed name")
 
 
 class V1():
@@ -90,5 +94,41 @@ class V1():
             CATS_STORAGE.append(validated)
             return validated
 
-api.add_route("/v1/cats/{cat_id}", V1.Cat())
-api.add_route("/v1/cats/", V1.CatList())
+
+class Templated(object):
+    template_name = None
+
+    def __init__(self, template_name=None, context=None):
+        # note: this is to ensure that template_name can be set as
+        #       class level attribute in derrived class
+        self.template_name = template_name or self.template_name
+        self.context = context or {}
+
+    def render(self, req, resp):
+        template = env.get_template(self.template_name)
+        return template.render(**self.context)
+
+    def on_get(self, req, resp):
+        resp.body = self.render(req, resp)
+        resp.content_type = 'text/html'
+
+api = application = falcon.API()
+
+endpoints = {
+    "/v1/cats/{cat_id}": V1.Cat(),
+    "/v1/cats/": V1.CatList(),
+}
+
+for uri, endpoint in endpoints.items():
+    # add resource endpoints
+    api.add_route(uri, endpoints)
+
+# create documentation resource from API endpoints
+# and add it to the router
+api.add_route("/", Templated('index.html', {
+    'descriptions': {
+        uri: endpoint.describe()
+        for uri, endpoint
+        in endpoints.items()
+    }
+}))
