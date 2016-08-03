@@ -3,6 +3,7 @@ import decimal
 import base64
 
 import pytest
+from graceful.errors import ValidationError
 
 from graceful.parameters import (
     BaseParam,
@@ -13,6 +14,7 @@ from graceful.parameters import (
     DecimalParam,
     BoolParam,
 )
+from graceful.validators import min_validator, max_validator
 
 
 class TestParam(BaseParam):
@@ -72,6 +74,27 @@ def test_param_default_value():
 def test_string_param():
     param = StringParam(details="stringy stringy")
     assert param.value("foo") == "foo"
+
+
+@pytest.mark.parametrize('raw_value', ['10', '15', '20'])
+def test_int_param_validation_passes(raw_value):
+    param = IntParam(
+        details="min max test",
+        validators=[min_validator(10), max_validator(20)]
+    )
+
+    assert param.validated_value(raw_value) is int(raw_value)
+
+
+@pytest.mark.parametrize('raw_value', ['1', '9', '21'])
+def test_int_param_validation_fails(raw_value):
+    param = IntParam(
+        details="min max test",
+        validators=[min_validator(10), max_validator(20)]
+    )
+
+    with pytest.raises(ValidationError):
+        param.validated_value(raw_value)
 
 
 def _test_param(param, encoded, invalid, desired):

@@ -241,20 +241,32 @@ class BaseResource(metaclass=MetaResource):
                 try:
                     if param.many:
                         # params with "many" enabled need special care
-                        params[name] = param.container(
-                            req.get_param_as_list(name, param.value) or
-                            [param.default and param.value(param.default)]
-                        )
+                        values = req.get_param_as_list(
+                            # note: falcon allows to pass value handler using
+                            #       `transform` param so we do not need to
+                            #       iterate through list manually
+                            name, param.validated_value
+                        ) or [
+                            param.default and
+                            param.validated_value(param.default)
+                        ]
+                        params[name] = param.container(values)
                     else:
                         # note that if many==False and query parameter
                         # occurs multiple times in qs then it is
                         # **unspecified** which one will be used. See:
                         # http://falcon.readthedocs.org/en/latest/api/request_and_response.html#falcon.Request.get_param  # noqa
-                        params[name] = param.value(
+                        params[name] = param.validated_value(
                             req.get_param(name, default=param.default)
                         )
 
+                except ValidationError as err:
+                    # ValidationError allows to easily translate itself to
+                    # to falcon's HTTPInvalidParam (Bad Request HTTP response)
+                    raise err.as_invalid_param(name)
+
                 except ValueError as err:
+                    # Other parsing issues are expected to raise ValueError
                     raise errors.HTTPInvalidParam(str(err), name)
 
         return params

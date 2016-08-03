@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from falcon import HTTPBadRequest
+from falcon import HTTPBadRequest, HTTPInvalidParam
 
 
 class DeserializationError(ValueError):
@@ -59,4 +59,20 @@ class ValidationError(ValueError):
         return HTTPBadRequest(
             title="Validation failed",
             description=str(self)
+        )
+
+    def as_invalid_param(self, param_name):
+        """Translate this error to falcon's HTTP specific error exception.
+
+        Note:
+            Exceptions returned by this method should be used to inform about
+            param validation failures. In case of resource validation
+            failures the ``as_bad_request()`` method should be used.
+
+        Args:
+            param_name (str): HTTP query string parameter name
+
+        """
+        return HTTPInvalidParam(
+            str(self), param_name
         )

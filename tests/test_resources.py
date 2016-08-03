@@ -11,9 +11,10 @@ import pytest
 
 from graceful.errors import ValidationError
 from graceful.resources.generic import Resource
-from graceful.parameters import StringParam, BaseParam
+from graceful.parameters import StringParam, BaseParam, IntParam
 from graceful.serializers import BaseSerializer
 from graceful.fields import StringField
+from graceful.validators import min_validator, max_validator
 
 
 class TestResource(Resource):
@@ -252,14 +253,48 @@ def test_parameter_inheritance():
 
 def test_parameter_with_many_and_required():
     class SomeResource(Resource):
-        foo = StringParam(details="give me foo", required=True, many=True)
+        foo = IntParam(details="give me foo", required=True, many=True)
 
-    env = create_environ(query_string="foo=bar&foo=baz")
+    env = create_environ(query_string="foo=1&foo=2")
     resource = SomeResource()
     params = resource.require_params(Request(env))
 
     assert isinstance(params['foo'], Iterable)
-    assert set(params['foo']) == {'bar', 'baz'}
+    assert set(params['foo']) == {1, 2}
+
+
+@pytest.mark.parametrize(
+    'query_string', ['number=10', 'number=15', 'number=20']
+)
+def test_parameter_with_validation_enabled_passes(query_string):
+    class SomeResource(Resource):
+        number = IntParam(
+            details="number with min/max bounds",
+            validators=[min_validator(10), max_validator(20)]
+        )
+
+    env = create_environ(query_string=query_string)
+    resource = SomeResource()
+    params = resource.require_params(Request(env))
+
+    assert isinstance(params['number'], int)
+
+
+@pytest.mark.parametrize(
+    'query_string', ['number=5', 'number=100']
+)
+def test_parameter_with_validation_raises_bad_request(query_string):
+    class SomeResource(Resource):
+        number = IntParam(
+            details="number with min/max bounds",
+            validators=[min_validator(10), max_validator(20)]
+        )
+
+    env = create_environ(query_string=query_string)
+    resource = SomeResource()
+
+    with pytest.raises(errors.HTTPBadRequest):
+        resource.require_params(Request(env))
 
 
 def test_parameter_with_many_and_default(req):
