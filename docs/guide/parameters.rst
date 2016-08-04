@@ -371,9 +371,8 @@ Uniqueness is simply achieved by using built-in ``set`` type as its
 
     from graceful.parameters import BaseParam
 
-    class PolygonParam(BaseParam):
-        """ Represents polygon parameter in string form of "x1,y1;x2,y2;..."
-        """
+    class UniqueStringParam(BaseParam):
+        """Same as StringParam but on ``many=True`` returns set of values."""
         container = set
 
 
@@ -419,16 +418,15 @@ with predefined operator:
                 **kwargs
         ):
             if solr_field is None:
-                raise ValueError("{} needs a `field` param cannot be None".format(
-                    self.__class__.__name__)
+                raise ValueError(
+                    "`solr_field` argument of {} cannot be None"
+                    "".format(self.__class__.__name__)
                 )
 
             self.solr_field = solr_field
             self.op = op
 
-            super(FilterQueryParam, self).__init__(
-                details, **kwargs
-            )
+            super().__init__(details, **kwargs)
 
         def value(self, raw_value):
             return Q({self.solr_field: raw_value})
