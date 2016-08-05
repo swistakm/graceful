@@ -64,7 +64,7 @@ class MetaSerializer(type):
         )
 
 
-class BaseSerializer(metaclass=MetaSerializer):
+class BaseSerializer(BaseField, metaclass=MetaSerializer):
     """Base serializer class for describing internal object serialization.
 
     Example:
@@ -80,7 +80,24 @@ class BaseSerializer(metaclass=MetaSerializer):
             age = IntField("cat age in years")
             height = FloatField("cat height in cm")
 
+
+    Args:
+        details (str): this will be included as a field details description if
+            serializer is used as a nested resource serialization field.
+            Defaults to serializer class docstring or ``""`` (if docstring
+            does not exist).
+        doc_uri (str): this will be inlcuded as a part of field spec if
+            serializer is included as a nested resource serializer field.
+            If not provided the field description will have ``spec=None``
+
     """
+
+    def __init__(self, details=None, doc_uri=None, **kwargs):
+        """Initialize serializer in a way that allows using it as a field."""
+        if doc_uri:
+            self.spec = self.__class__.__name__, doc_uri
+
+        super().__init__(details=details or self.__doc__ or "", **kwargs)
 
     @property
     def fields(self):
@@ -273,18 +290,27 @@ class BaseSerializer(metaclass=MetaSerializer):
         else:
             setattr(obj, attr, value)
 
-    def describe(self):
-        """Describe all serialized fields.
+    def describe(self, fields=False):
+        """Describe this serializer as a field or all of its serialized fields.
 
-        It returns dictionary of all fields description defined for this
-        serializer using their own ``describe()`` methods with respect to order
-        in which they are defined as class attributes.
+        By default describes this single object as a field to support nested
+        resource serializations. If ``fields`` argument is set to ``True`` it
+        returns dictionary of all fields description defined for this
+        serializer using their own ``describe()`` methods with respect to
+        order in which they are defined as class attributes.
+
+        Args:
+            fields: tell if describe all of serializers fields or this single
+                object as a separate field. Defaults to ``False``
 
         Returns:
             OrderedDict: serializer description
 
         """
-        return OrderedDict([
-            (name, field.describe())
-            for name, field in self.fields.items()
-        ])
+        if fields:
+            return OrderedDict([
+                (name, field.describe())
+                for name, field in self.fields.items()
+            ])
+        else:
+            return super(BaseSerializer, self).describe()

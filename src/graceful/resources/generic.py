@@ -78,7 +78,10 @@ class RetrieveAPI(RetrieveMixin, BaseResource):
         return super().describe(
             req, resp,
             type='object',
-            fields=self.serializer.describe() if self.serializer else None,
+            fields=(
+                self.serializer.describe(fields=True)
+                if self.serializer else None
+            ),
             **kwargs
         )
 

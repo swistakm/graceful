@@ -4,7 +4,7 @@
 All tested serializer classes should be defined within tests because
 we test how whole framework for defining new serializers works.
 """
-from graceful.fields import BaseField
+from graceful.fields import BaseField, StringField
 from graceful.serializers import BaseSerializer
 
 
@@ -228,7 +228,7 @@ def test_serializer_describe():
 
     serializer = ExampleSerializer()
 
-    description = serializer.describe()
+    description = serializer.describe(fields=True)
     assert isinstance(description, dict)
     assert 'foo' in description
     assert 'bar' in description
@@ -252,3 +252,20 @@ def test_serialiser_representation_with_field_many():
     instance = {'up': ["aa", "bb", "cc"]}
 
     assert serializer.to_representation(instance) == {"up": ["AA", "BB", "CC"]}
+
+
+def test_nested_resource_serialization():
+    class Inner(BaseSerializer):
+        fooX = StringField("Foo field", source='foo')
+
+    class Outer(BaseSerializer):
+        innerX = Inner(details="inner object", source='inner')
+        nameX = StringField("Name field", source='name')
+
+    serializer = Outer()
+
+    internal = {"inner": {"foo": "something"}, "name": "my outer"}
+    representation = {"innerX": {"fooX": "something"}, "nameX": "my outer"}
+
+    assert serializer.to_representation(internal) == representation
+    assert serializer.from_representation(representation) == internal
