@@ -299,6 +299,69 @@ class CreateMixin(BaseMixin):
         resp.status = falcon.HTTP_CREATED
 
 
+class CreateBulkMixin(BaseMixin):
+    """Add default "bulk creation flow on PATCH" to any resource class."""
+
+    def create_bulk(self, params, meta, **kwargs):
+        """Create multiple resource instances and return their representation.
+
+        This is default multiple resource instances creation method. Value
+        returned is the representation of multiple resource instances. It will
+        be included in the 'content' section of response body.
+
+        Args:
+            params (dict): dictionary of parsed parameters accordingly
+                to definitions provided as resource class atributes.
+            meta (dict): dictionary of meta parameters anything added
+                to this dict will will be later included in response
+                'meta' section. This can already prepopulated by method
+                that calls this handler.
+            kwargs (dict): dictionary of values retrieved from route url
+                template by falcon. This is suggested way for providing
+                resource identifiers.
+
+
+        Returns:
+            value to be included in response 'content' section
+
+        """
+        raise NotImplementedError("create method not implemented")
+
+    def get_object_location(self, obj):
+        """Return location URI associated with given resource representation.
+
+        This handler is optional. Returned URI will be included as the
+        value of ``Location`` header on POST responses.
+        """
+        raise NotImplementedError("update method not implemented")
+
+    def on_patch(self, req, resp, handler=None, **kwargs):
+        """Respond on POST HTTP request assuming resource creation flow.
+
+        This request handler assumes that POST requests are associated with
+        resource creation. Thus default flow for such requests is:
+
+        * Create new resource instances and prepare their representation by
+          calling its bulk creation method handler.
+        * Set response status code to ``201 Created``.
+
+        **Note:** this handler does not set ``Location`` header by default as
+        it would be valid only for single resource creation.
+
+        Args:
+            req (falcon.Request): request object instance.
+            resp (falcon.Response): response object instance to be modified
+            handler (method): creation method handler to be called. Defaults
+                to ``self.create``.
+            **kwargs: additional keyword arguments retrieved from url template.
+        """
+        self.handle(
+            handler or self.create_bulk, req, resp, **kwargs
+        )
+
+        resp.status = falcon.HTTP_CREATED
+
+
 class PaginatedMixin(BaseResource):
     """Add simple pagination capabilities to resource.
 
