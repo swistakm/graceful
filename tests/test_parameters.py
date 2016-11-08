@@ -17,7 +17,7 @@ from graceful.parameters import (
 from graceful.validators import min_validator, max_validator
 
 
-class TestParam(BaseParam):
+class ExampleParam(BaseParam):
     """Example testing param class that returns raw value
     """
     type = "string"
@@ -31,7 +31,7 @@ class TestParam(BaseParam):
 
 
 def test_parameter_description():
-    param = TestParam(details="details", required=False)
+    param = ExampleParam(details="details", required=False)
 
     description = param.describe()
     assert 'label' in description
@@ -42,7 +42,7 @@ def test_parameter_description():
 
 
 def test_parameter_value():
-    param = TestParam('label', "details", required=False)
+    param = ExampleParam('label', "details", required=False)
     value = "something passed in qs"
 
     # simple API existence check
@@ -60,15 +60,15 @@ def test_implementation_hooks():
 
 def test_param_default_value():
     # this should pass
-    TestParam(details="details", default="foo")
+    ExampleParam(details="details", default="foo")
 
     # anything other than str should raise TypeError
     with pytest.raises(TypeError):
-        TestParam(details="details", default=123)
+        ExampleParam(details="details", default=123)
 
     # test using required and default at the same time has no sense
     with pytest.raises(ValueError):
-        TestParam(details="details", default="foo", required=True)
+        ExampleParam(details="details", default="foo", required=True)
 
 
 def test_string_param():

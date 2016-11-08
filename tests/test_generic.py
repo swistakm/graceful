@@ -41,7 +41,7 @@ def index_error_as_404(fun):
     return resource_handler
 
 
-class TestSerializer(BaseSerializer):
+class ExampleSerializer(BaseSerializer):
     writable = RawField("testing writable field")
     readonly = RawField("testing readonly field", read_only=True)
     unsigned = IntField(
@@ -55,16 +55,16 @@ class StoredResource:
         self.storage = storage or []
 
 
-class TestRetrieveAPI(RetrieveAPI, StoredResource):
-    serializer = TestSerializer()
+class ExampleRetrieveAPI(RetrieveAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     @index_error_as_404
     def retrieve(self, params, meta, index, **kwargs):
         return self.storage[int(index)]
 
 
-class TestRetrieveUpdateAPI(RetrieveUpdateAPI, StoredResource):
-    serializer = TestSerializer()
+class ExampleRetrieveUpdateAPI(RetrieveUpdateAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     @index_error_as_404
     def retrieve(self, params, meta, index, **kwargs):
@@ -76,8 +76,8 @@ class TestRetrieveUpdateAPI(RetrieveUpdateAPI, StoredResource):
         return validated
 
 
-class TestRetrieveUpdateDeleteAPI(RetrieveUpdateDeleteAPI, StoredResource):
-    serializer = TestSerializer()
+class ExampleRetrieveUpdateDeleteAPI(RetrieveUpdateDeleteAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     @index_error_as_404
     def retrieve(self, params, meta, index, **kwargs):
@@ -93,22 +93,22 @@ class TestRetrieveUpdateDeleteAPI(RetrieveUpdateDeleteAPI, StoredResource):
         self.storage.pop(int(index))
 
 
-class TestListAPI(ListAPI, StoredResource):
-    serializer = TestSerializer()
+class ExampleListAPI(ListAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     def list(self, params, meta, **kwargs):
         return self.storage
 
 
-class TestListWithUriVariableAPI(ListAPI, StoredResource):
-    serializer = TestSerializer()
+class ExampleListWithUriVariableAPI(ListAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     def list(self, params, meta, uri_template_variable, **kwargs):
         return self.storage
 
 
-class TestListCreateAPI(ListCreateAPI, StoredResource):
-    serializer = TestSerializer()
+class ExampleListCreateAPI(ListCreateAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     def list(self, params, meta, **kwargs):
         return self.storage
@@ -118,8 +118,8 @@ class TestListCreateAPI(ListCreateAPI, StoredResource):
         return validated
 
 
-class TestPaginatedListAPI(PaginatedListAPI, StoredResource):
-    serializer = TestSerializer()
+class ExamplePaginatedListAPI(PaginatedListAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     def list(self, params, meta, **kwargs):
         start = params['page_size'] * (params['page'])
@@ -127,8 +127,8 @@ class TestPaginatedListAPI(PaginatedListAPI, StoredResource):
         return self.storage[start:end]
 
 
-class TestPaginatedListCreateAPI(PaginatedListCreateAPI, StoredResource):
-    serializer = TestSerializer()
+class ExamplePaginatedListCreateAPI(PaginatedListCreateAPI, StoredResource):
+    serializer = ExampleSerializer()
 
     def list(self, params, meta, **kwargs):
         start = params['page_size'] * (params['page'])
@@ -398,7 +398,7 @@ class RetrieveTestCase(
         super(RetrieveTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestRetrieveAPI(self.storage)
+            ExampleRetrieveAPI(self.storage)
         )
 
 
@@ -411,7 +411,7 @@ class RetrieveUpdateTestCase(
         super(RetrieveUpdateTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestRetrieveUpdateAPI(self.storage)
+            ExampleRetrieveUpdateAPI(self.storage)
         )
 
 
@@ -425,7 +425,7 @@ class RetrieveUpdateDeleteTestCase(
         super(RetrieveUpdateDeleteTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestRetrieveUpdateDeleteAPI(self.storage)
+            ExampleRetrieveUpdateDeleteAPI(self.storage)
         )
 
 
@@ -437,7 +437,7 @@ class ListTestCase(
         super(ListTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestListAPI(self.storage)
+            ExampleListAPI(self.storage)
         )
 
 
@@ -453,7 +453,7 @@ class ListWithUriVariableTestCase(
         super(ListWithUriVariableTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestListWithUriVariableAPI(self.storage),
+            ExampleListWithUriVariableAPI(self.storage),
         )
 
 
@@ -466,7 +466,7 @@ class ListCreateTestCase(
         super(ListCreateTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestListCreateAPI(self.storage)
+            ExampleListCreateAPI(self.storage)
         )
 
 
@@ -479,7 +479,7 @@ class PaginatedListTestCase(
         super(PaginatedListTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestPaginatedListAPI(self.storage)
+            ExamplePaginatedListAPI(self.storage)
         )
 
 
@@ -493,5 +493,5 @@ class PaginatedListCreateTestCase(
         super(PaginatedListCreateTestCase, self).setUp()
         self.api.add_route(
             self.uri_template,
-            TestPaginatedListCreateAPI(self.storage)
+            ExamplePaginatedListCreateAPI(self.storage)
         )

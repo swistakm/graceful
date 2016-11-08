@@ -8,7 +8,7 @@ from graceful.fields import BaseField
 from graceful.serializers import BaseSerializer
 
 
-class TestField(BaseField):
+class ExampleField(BaseField):
     """ This is basic field for usage in tests that has raw data representation
     (same as internal)
     """
@@ -24,10 +24,10 @@ def test_simple_serializer_definition():
     Test if serializers can be defined in declarative way
     """
     class TestSimpleSerializer(BaseSerializer):
-        foo = TestField(
+        foo = ExampleField(
             details="first field for testing"
         )
-        bar = TestField(
+        bar = ExampleField(
             details="second field for testing"
         )
 
@@ -53,15 +53,15 @@ def test_empty_serializer_definition():
 
 def test_serializer_inheritance():
     class TestParentSerializer(BaseSerializer):
-        foo = TestField(
+        foo = ExampleField(
             details="first field for testing"
         )
-        bar = TestField(
+        bar = ExampleField(
             details="second field for testing"
         )
 
     class TestDerivedSerializer(TestParentSerializer):
-        baz = TestField(
+        baz = ExampleField(
             details="this is additional field added as an extension"
         )
         pass
@@ -83,11 +83,11 @@ def test_serializer_field_overriding():
     parent_label = "parent"
 
     class TestParentSerializer(BaseSerializer):
-        foo = TestField(label=parent_label, details="parent foo field")
-        bar = TestField(label=parent_label, details="parent bar field")
+        foo = ExampleField(label=parent_label, details="parent foo field")
+        bar = ExampleField(label=parent_label, details="parent bar field")
 
     class TestOverridingSerializer(TestParentSerializer):
-        foo = TestField(label=override_label, details='overriden foo field')
+        foo = ExampleField(label=override_label, details='overriden foo field')
 
     serializer = TestOverridingSerializer()
     # make sure there are only two fields
@@ -101,8 +101,8 @@ def test_serializer_field_overriding():
 
 def test_serialiser_simple_representation():
     class SomeConcreteSerializer(BaseSerializer):
-        name = TestField(details="name of instance object")
-        address = TestField(details="instance address")
+        name = ExampleField(details="name of instance object")
+        address = ExampleField(details="instance address")
 
     object_instance = {
         "name": "John",
@@ -129,11 +129,11 @@ def test_serialiser_sources_representation():
     """
 
     class SomeConcreteSerializer(BaseSerializer):
-        name = TestField(
+        name = ExampleField(
             details="name of instance object (taken from _name)",
             source="_name",
         )
-        address = TestField(
+        address = ExampleField(
             details="address of instace object (taken from _address)",
             source="_address"
         )
@@ -208,7 +208,7 @@ def test_serializer_source_wildcard():
 
 def test_serializer_source_field_with_wildcard():
     class ExampleSerializer(BaseSerializer):
-        instance = TestField(
+        instance = ExampleField(
             details='whole object instance goes here',
             source='*',
         )
@@ -223,8 +223,8 @@ def test_serializer_describe():
     """ Test that serializers are self-describing
     """
     class ExampleSerializer(BaseSerializer):
-        foo = TestField(label='foo', details='foo foo')
-        bar = TestField(label='bar', details='bar bar')
+        foo = ExampleField(label='foo', details='foo foo')
+        bar = ExampleField(label='bar', details='bar bar')
 
     serializer = ExampleSerializer()
 
