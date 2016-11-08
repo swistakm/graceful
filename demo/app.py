@@ -62,6 +62,9 @@ class V1():
 
             return validated
 
+        def on_get(self, req, resp, **kwargs):
+            super().on_get(req, resp, additional=None, **kwargs)
+
         def retrieve(self, params, meta, **kwargs):
             cat_id = kwargs['cat_id']
             return self.get_cat(cat_id)
@@ -121,12 +124,12 @@ endpoints = {
 
 for uri, endpoint in endpoints.items():
     # add resource endpoints
-    api.add_route(uri, endpoints)
+    api.add_route(uri, endpoint)
 
 # create documentation resource from API endpoints
 # and add it to the router
 api.add_route("/", Templated('index.html', {
-    'descriptions': {
+    'endpoints': {
         uri: endpoint.describe()
         for uri, endpoint
         in endpoints.items()

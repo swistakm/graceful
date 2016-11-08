@@ -242,7 +242,7 @@ For APIs that contain a lot of multiple resources it is always better to follow
     }
 
     for uri, endpoint in endpoints:
-        api.add_route(uri, endpoints)
+        api.add_route(uri, endpoint)
 
     api.add_route("/", Templated('index.html', {
         'endpoints': {

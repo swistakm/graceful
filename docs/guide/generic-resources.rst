@@ -183,7 +183,7 @@ Example usage:
     db = SomeDBInterface()
     api = application = falcon.API()
 
-    class FooListResource(ListAPIResource):
+    class FooListResource(ListAPI):
         serializer = RawSerializer()
 
         def list(self, params, meta, **kwargs):
@@ -232,7 +232,7 @@ Example usage:
     db = SomeDBInterface()
     api = application = falcon.API()
 
-    class FooListResource(ListAPIResource):
+    class FooListResource(ListCreateAPI):
         serializer = RawSerializer()
 
         def list(self, params, meta, **kwargs):
@@ -246,12 +246,13 @@ Example usage:
     api.add_route('foo/', FooListResource())
 
 
+
 Paginated generic resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :class:`PaginatedListAPI` and :class:`PaginatedListCreateAPI` are versions
-of respecrively :class:`ListAPI` and :class:`ListAPI` classes that supply
-with simple pagination build with following parameters:
+of :class:`ListAPI` and :class:`ListAPI` classes that support simple pagination
+with following parameters:
 
 * **page_size:** size of a single response page
 * **page:** page count
