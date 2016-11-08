@@ -212,7 +212,10 @@ class ListCreateAPI(CreateMixin, CreateBulkMixin, ListAPI):
             of ``.create()`` method handler.
         """
         validated = kwargs.pop('validated')
-        return [self.create(params, meta, item) for item in validated]
+        return [
+            self.create(params, meta, validated=item)
+            for item in validated
+        ]
 
     def on_post(self, req, resp, **kwargs):
         """Respond on POST requests using ``self.create()`` handler."""

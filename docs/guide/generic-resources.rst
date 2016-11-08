@@ -353,7 +353,7 @@ instance retrieved from request payload. The actual code is following:
 
    def create_bulk(self, params, meta, **kwargs):
         validated = kwargs.pop('validated')
-        return [self.create(params, meta, item) for item in validated]
+        return [self.create(params, meta, validated=item) for item in validated]
 
 This approach to bulk resource creation may not be the most performant one if
 you save resource instance to your storage on every ``create()`` call.

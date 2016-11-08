@@ -316,24 +316,15 @@ class CreateBulkMixin(BaseMixin):
                 to this dict will will be later included in response
                 'meta' section. This can already prepopulated by method
                 that calls this handler.
-            kwargs (dict): dictionary of values retrieved from route url
+            kwargs (dict): dictionary of values retrieved from the route url
                 template by falcon. This is suggested way for providing
                 resource identifiers.
-
 
         Returns:
             value to be included in response 'content' section
 
         """
-        raise NotImplementedError("create method not implemented")
-
-    def get_object_location(self, obj):
-        """Return location URI associated with given resource representation.
-
-        This handler is optional. Returned URI will be included as the
-        value of ``Location`` header on POST responses.
-        """
-        raise NotImplementedError("update method not implemented")
+        raise NotImplementedError("create method not implemented")  # pragma: nocover # noqa
 
     def on_patch(self, req, resp, handler=None, **kwargs):
         """Respond on POST HTTP request assuming resource creation flow.
