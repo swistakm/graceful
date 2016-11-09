@@ -139,6 +139,7 @@ class BaseResource(metaclass=MetaResource):
                 ('GET', hasattr(self, 'on_get')),
                 ('POST', hasattr(self, 'on_post')),
                 ('PUT', hasattr(self, 'on_put')),
+                ('PATCH', hasattr(self, 'on_patch')),
                 ('DELETE', hasattr(self, 'on_delete')),
                 ('HEAD', hasattr(self, 'on_head')),
                 ('OPTIONS', hasattr(self, 'on_options')),
@@ -331,7 +332,7 @@ class BaseResource(metaclass=MetaResource):
                 description="only JSON supported, got: {}".format(content_type)
             )
 
-    def require_validated(self, req, partial=False):
+    def require_validated(self, req, partial=False, bulk=False):
         """Require fully validated internal object dictionary.
 
         Internal object dictionary creation is based on content-decoded
@@ -340,20 +341,35 @@ class BaseResource(metaclass=MetaResource):
 
         Args:
             req (falcon.Request): request object
-            partial (bool): self to True if partially complete representation
+            partial (bool): set to True if partially complete representation
                 is accepted (e.g. for patching instead of full update). Missing
                 fields in representation will be skiped.
+            bulk (bool): set to True if request payload represents multiple
+                resources instead of single one.
 
         Returns:
             dict: dictionary of fields and values representing internal object.
                 Each value is a result of ``field.from_representation`` call.
 
         """
-        representation = self.require_representation(req)
+        representations = [
+            self.require_representation(req)
+        ] if not bulk else self.require_representation(req)
+
+        if bulk and not isinstance(representations, list):
+            raise ValidationError(
+                "Request payload should represent a list of resources."
+            ).as_bad_request()
+
+        object_dicts = []
 
         try:
-            object_dict = self.serializer.from_representation(representation)
-            self.serializer.validate(object_dict, partial)
+            for representation in representations:
+                object_dict = self.serializer.from_representation(
+                    representation
+                )
+                self.serializer.validate(object_dict, partial)
+                object_dicts.append(object_dict)
 
         except DeserializationError as err:
             # when working on Resource we know that we can finally raise
@@ -365,4 +381,4 @@ class BaseResource(metaclass=MetaResource):
             # so we also are prepared to catch it
             raise err.as_bad_request()
 
-        return object_dict
+        return object_dicts if bulk else object_dicts[0]

@@ -9,6 +9,7 @@ from graceful.resources.mixins import (
     CreateMixin,
     DeleteMixin,
     PaginatedMixin,
+    CreateBulkMixin
 )
 
 
@@ -174,7 +175,7 @@ class ListAPI(ListMixin, BaseResource):
         return super().on_get(req, resp, handler=self._list, **kwargs)
 
 
-class ListCreateAPI(CreateMixin, ListAPI):
+class ListCreateAPI(CreateMixin, CreateBulkMixin, ListAPI):
     """Generic List/Create API with resource serialization.
 
     Generic resource that uses serializer for resource description,
@@ -186,6 +187,8 @@ class ListCreateAPI(CreateMixin, ListAPI):
       with ``.list()`` method handler)
     * POST: create new resource from representation provided in request body
       (handled with ``.create()`` method handler)
+    * PATCH: create multiple resources from list of representations provided
+      in request body (handled with ``.create_bulk()`` method handler.
 
     """
 
@@ -194,6 +197,26 @@ class ListCreateAPI(CreateMixin, ListAPI):
             self.create(params, meta, **kwargs)
         )
 
+    def _create_bulk(self, params, meta, **kwargs):
+        return [
+            self.serializer.to_representation(obj)
+            for obj in self.create_bulk(params, meta, **kwargs)
+        ]
+
+    def create_bulk(self, params, meta, **kwargs):
+        """Create items in bulk by reusing existing ``.create()`` handler.
+
+        .. note::
+            This is default create_bulk implementation that may not be safe
+            to use in production environment depending on your implementation
+            of ``.create()`` method handler.
+        """
+        validated = kwargs.pop('validated')
+        return [
+            self.create(params, meta, validated=item)
+            for item in validated
+        ]
+
     def on_post(self, req, resp, **kwargs):
         """Respond on POST requests using ``self.create()`` handler."""
         validated = self.require_validated(req)
@@ -201,6 +224,16 @@ class ListCreateAPI(CreateMixin, ListAPI):
         return super().on_post(
             req, resp,
             handler=partial(self._create, validated=validated),
+            **kwargs
+        )
+
+    def on_patch(self, req, resp, **kwargs):
+        """Respond on PATCH requests using ``self.create_bulk()`` handler."""
+        validated = self.require_validated(req, bulk=True)
+
+        return super().on_patch(
+            req, resp,
+            handler=partial(self._create_bulk, validated=validated),
             **kwargs
         )
 

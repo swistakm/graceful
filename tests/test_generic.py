@@ -161,6 +161,12 @@ class ImplementationHooksTests(TestCase):
         with pytest.raises(NotImplementedError):
             PaginatedListCreateAPI().create(None, None)
 
+    def test_create_bulk(self):
+        with pytest.raises(NotImplementedError):
+            # note: create_bulk() is already implemented but it should
+            #       reuse create() that is not implemented
+            PaginatedListCreateAPI().create_bulk(None, None, validated=[{}])
+
 
 class GenericsTestBase(TestBase):
     def setUp(self):
@@ -349,6 +355,15 @@ class CreateTestsMixin():
             body=json.dumps(representation),
         )
 
+    def do_create_bulk(self, representation):
+        return self.simulate_request(
+            self.uri_template,
+            decode='utf-8',
+            method='PATCH',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps(representation),
+        )
+
     def test_create(self):
         result = self.do_create(
             {'writable': 'changed', 'unsigned': 12}
@@ -386,6 +401,18 @@ class CreateTestsMixin():
             body="foo bar",
         )
         assert self.srmock.status == falcon.HTTP_UNSUPPORTED_MEDIA_TYPE
+
+    def test_create_bulk(self):
+        self.do_create_bulk(
+            [{'writable': 'changed', 'unsigned': 12}]
+        )
+        assert self.srmock.status == falcon.HTTP_CREATED
+
+    def test_create_bulk_without_list_results_in_bad_request(self):
+        self.do_create_bulk(
+            {'writable': 'changed', 'unsigned': 12}
+        )
+        assert self.srmock.status == falcon.HTTP_BAD_REQUEST
 
 
 # actual test cases classes here
