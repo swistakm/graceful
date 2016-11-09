@@ -188,7 +188,7 @@ class ListCreateAPI(CreateMixin, CreateBulkMixin, ListAPI):
     * POST: create new resource from representation provided in request body
       (handled with ``.create()`` method handler)
     * PATCH: create multiple resources from list of representations provided
-      in request body (handled with ``.creat_bulk()`` method handler.
+      in request body (handled with ``.create_bulk()`` method handler.
 
     """
 
