@@ -8,9 +8,12 @@ from falcon import Request
 from falcon import errors
 import falcon
 import pytest
+from unittest.mock import Mock
 
 from graceful.errors import ValidationError
+from graceful.resources.base import BaseResource
 from graceful.resources.generic import Resource
+from graceful.resources import mixins
 from graceful.parameters import StringParam, BaseParam, IntParam
 from graceful.serializers import BaseSerializer
 from graceful.fields import StringField
@@ -458,3 +461,84 @@ def test_require_representation_unsupported_media_type():
 
     with pytest.raises(falcon.HTTPUnsupportedMediaType):
         resource.require_representation(Request(env))
+
+
+@pytest.mark.parametrize("mixin,method,http_handler", [
+    (mixins.RetrieveMixin, 'retrieve', 'on_get'),
+    (mixins.ListMixin, 'list', 'on_get'),
+    (mixins.CreateMixin, 'create', 'on_post'),
+    (mixins.CreateBulkMixin, 'create_bulk', 'on_patch'),
+    (mixins.UpdateMixin, 'update', 'on_put'),
+])
+def test_context_enabled_explicitly(mixin, method, http_handler, req, resp):
+    # future: remove in 1.x
+    req.context = {"foo": "bar"}
+
+    class ResourceWithContext(mixin, BaseResource, with_context=True):
+        pass
+
+    resource = ResourceWithContext()
+    mock_method = Mock(return_value={})
+
+    setattr(resource, method, mock_method)
+    getattr(resource, http_handler)(req, resp)
+
+    args, kwargs = mock_method.call_args
+
+    assert 'context' in kwargs
+    assert kwargs['context'] == req.context
+
+
+@pytest.mark.parametrize("mixin,method,http_handler", [
+    (mixins.RetrieveMixin, 'retrieve', 'on_get'),
+    (mixins.ListMixin, 'list', 'on_get'),
+    (mixins.CreateMixin, 'create', 'on_post'),
+    (mixins.CreateBulkMixin, 'create_bulk', 'on_patch'),
+    (mixins.UpdateMixin, 'update', 'on_put'),
+])
+def test_context_disabled_explicitly(mixin, method, http_handler, req, resp):
+    # future: remove in 1.x
+    class ResourceWithoutContext(mixin, BaseResource, with_context=False):
+        pass
+
+    resource = ResourceWithoutContext()
+    mock_method = Mock(return_value={})
+
+    setattr(resource, method, mock_method)
+    getattr(resource, http_handler)(req, resp)
+
+    args, kwargs = mock_method.call_args
+
+    assert 'context' not in kwargs
+
+
+@pytest.mark.parametrize("mixin,method,http_handler", [
+    (mixins.RetrieveMixin, 'retrieve', 'on_get'),
+    (mixins.ListMixin, 'list', 'on_get'),
+    (mixins.CreateMixin, 'create', 'on_post'),
+    (mixins.CreateBulkMixin, 'create_bulk', 'on_patch'),
+    (mixins.UpdateMixin, 'update', 'on_put'),
+])
+def test_context_disabled_implicitly(mixin, method, http_handler, req, resp):
+    # future: remove in 1.x
+    class ResourceWithoutContext(mixin, BaseResource):
+        pass
+
+    resource = ResourceWithoutContext()
+    mock_method = Mock(return_value={})
+
+    setattr(resource, method, mock_method)
+    getattr(resource, http_handler)(req, resp)
+
+    args, kwargs = mock_method.call_args
+
+    assert 'context' not in kwargs
+
+
+def test_warns_about_context_disabled_implicitly():
+    # future: remove in 1.x
+    class ResourceWithoutContext(BaseResource):
+        pass
+
+    with pytest.warns(FutureWarning):
+        ResourceWithoutContext()
