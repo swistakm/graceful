@@ -1,11 +1,10 @@
 [![Build Status](https://travis-ci.org/swistakm/graceful.svg?branch=master)](https://travis-ci.org/swistakm/graceful)
 [![Coverage Status](https://coveralls.io/repos/swistakm/graceful/badge.svg?branch=master)](https://coveralls.io/r/swistakm/graceful?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/graceful/badge/?version=latest)](http://graceful.readthedocs.io/en/latest/)
-
+[![Join the chat at https://gitter.im/graceful-for-falcon/Lobby](https://badges.gitter.im/graceful-for-falcon/Lobby.svg)](https://gitter.im/graceful-for-falcon/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # graceful
 
-[![Join the chat at https://gitter.im/graceful-for-falcon/Lobby](https://badges.gitter.im/graceful-for-falcon/Lobby.svg)](https://gitter.im/graceful-for-falcon/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 `graceful` is elegant Python REST toolkit built on top of
 [falcon](http://github.com/falconry/falcon). It is highly inspired
 by [Django REST framework](http://www.django-rest-framework.org/) - mostly by
@@ -25,10 +24,11 @@ Features:
 * falcon>=0.3.0 (tested up to 1.0.x)
 * python3 exclusive (tested from 3.3 to 3.5)
 
-There is no community behind graceful yet but I hope we will build one someday
-with your help. Anyway there is a mailing list on 
-[Librelist](http://librelist.com).
-Just send an email to graceful@librelist.com and you're subscribed.
+Community behind graceful is starting to grow but we don't have any mailing
+list yet. There was one on [Librelist](http://librelist.com/browser/graceful)
+but no one used it and it seems that librelist became dead (see GitHub
+issue #36). For now let's use gitter chat until we decide on something new.
+Chat is available [here](https://gitter.im/graceful-for-falcon/Lobby).
 
 
 # python3 only
