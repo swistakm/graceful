@@ -75,6 +75,7 @@ class MetaResource(type):
         )
 
     def __init__(cls, name, bases, namespace, **kwargs):
+        """Perform some additional class object initialization."""
         super().__init__(name, bases, namespace)
 
         try:
@@ -115,6 +116,7 @@ class BaseResource(metaclass=MetaResource):
         The ``with_context`` keyword argument.
 
     """
+
     indent = IntParam(
         """
         JSON output indentation. Set to 0 if output should not be formated.
@@ -125,6 +127,7 @@ class BaseResource(metaclass=MetaResource):
     serializer = None
 
     def __new__(cls, *args, **kwargs):
+        """Do some sanity checks before resource instance initialization."""
         instance = super().__new__(cls)
 
         if not hasattr(instance, '_with_context'):
