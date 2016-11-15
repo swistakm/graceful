@@ -41,9 +41,11 @@ your own http GET method handler like following:
 
 .. note::
 
-   Due to how falcon works there is **always** only single instance of a
+   Due to how falcon works there is **always** only a single instance of the
    resource class for a single registered route. Please remember to not keep
-   any state inside of this object (i.e. in ``self``) between any steps of
-   response generation.
+   any request processing state inside of this object using ``self.attribute``
+   lookup. If you need to store and access some additional unique data during
+   whole request processing flow you may want to use
+   :ref:`context-aware resource classes <guide-context-aware-resources>`.
 
 

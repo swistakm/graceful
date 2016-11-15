@@ -95,6 +95,25 @@ class BaseResource(metaclass=MetaResource):
     and validation of request included representations if serializer is
     defined.
 
+    All custom resource classes based on ``BaseResource`` accept additional
+    ``with_context`` keyword argument:
+
+
+    .. code-block:: python
+
+        class MyResource(BaseResource, with_context=True):
+            ...
+
+    The ``with_context`` argument tells if resource modification methods
+    (metods injected with mixins - list/create/update/etc.) should accept
+    the ``context`` argument in their signatures. For more details
+    see :ref:`guide-context-aware-resources` section of documentation. The
+    default value for ``with_context`` class keyword argument is ``False``.
+
+    .. versionadded:: 0.3.0
+
+        The ``with_context`` keyword argument.
+
     """
     indent = IntParam(
         """
