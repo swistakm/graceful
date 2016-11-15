@@ -27,7 +27,8 @@ Features:
 Community behind graceful is starting to grow but we don't have any mailing
 list yet. There was one on [Librelist](http://librelist.com/browser/graceful)
 but no one used it and it seems that librelist became dead (see GitHub
-issue #36). For now let's use gitter chat until we decide on something new.
+issue [#36](https://github.com/swistakm/graceful/issues/36)). For now let's use
+gitter chat until we decide on something new.
 Chat is available [here](https://gitter.im/graceful-for-falcon/Lobby).
 
 
