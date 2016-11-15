@@ -4,6 +4,8 @@
 
 
 # graceful
+
+[![Join the chat at https://gitter.im/graceful-for-falcon/Lobby](https://badges.gitter.im/graceful-for-falcon/Lobby.svg)](https://gitter.im/graceful-for-falcon/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 `graceful` is elegant Python REST toolkit built on top of
 [falcon](http://github.com/falconry/falcon). It is highly inspired
 by [Django REST framework](http://www.django-rest-framework.org/) - mostly by
