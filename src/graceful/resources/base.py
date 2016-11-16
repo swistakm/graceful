@@ -21,13 +21,9 @@ class MetaResource(type):
     def __prepare__(mcs, name, bases, **kwargs):
         """Prepare class namespace in a way that ensures order of attributes.
 
-        This needs to be an `OrderedDict` so `_get_params()` method can
-        construct params storage that preserves the same order of parameters
-        as defined in code.
-
-        Note: this is python3 thing and support for ordering of params in
-        descriptions will not be backported to python2 even if this framework
-        will get python2 support.
+        This needs to be an ``OrderedDict`` instance so ``_get_params()``
+        method can construct params storage that preserves the same order of
+        parameters as defined in code.
 
         Args:
             bases: all base classes of created resource class
@@ -111,9 +107,8 @@ class BaseResource(metaclass=MetaResource):
     see :ref:`guide-context-aware-resources` section of documentation. The
     default value for ``with_context`` class keyword argument is ``False``.
 
-    .. versionadded:: 0.3.0
-
-        The ``with_context`` keyword argument.
+    .. versionchanged:: 0.3.0
+        Added the ``with_context`` keyword argument.
 
     """
 
