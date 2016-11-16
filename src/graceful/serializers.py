@@ -59,7 +59,7 @@ class MetaSerializer(type):
         namespace[mcs._fields_storage_key] = mcs._get_fields(bases, namespace)
         return super().__new__(
             # note: there is no need preserve order in namespace anymore so
-            # we convert it explicitely to dict
+            # we convert it explicitly to dict
             mcs, name, bases, dict(namespace)
         )
 
@@ -157,7 +157,7 @@ class BaseSerializer(metaclass=MetaSerializer):
                 continue
 
             try:
-                # if field has explicitely specified source then use it
+                # if field has explicitly specified source then use it
                 # else fallback to field name.
                 # Note: field does not know its name
                 object_dict[field.source or name] = field.from_representation(

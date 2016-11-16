@@ -284,7 +284,7 @@ user to search for data in region defined as a polygon. Polygon can be simply
 represented by just an ordered list of points. But does it makes sense
 to define your polygon as ``point`` parameter with ``many=True``? Probably not.
 In case where order of data is important you need some custom parameter class
-that will explicitely define how to handle such parameters. The naive
+that will explicitly define how to handle such parameters. The naive
 implementation for polygon parameter could be as follows:
 The naive
 

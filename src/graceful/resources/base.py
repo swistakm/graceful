@@ -66,7 +66,7 @@ class MetaResource(type):
         namespace[mcs._params_storage_key] = mcs._get_params(bases, namespace)
         return super().__new__(
             # note: there is no need preserve order in namespace anymore so
-            # we convert it explicitely to dict
+            # we convert it explicitly to dict
             mcs, name, bases, dict(namespace),
         )
 
@@ -76,7 +76,7 @@ class MetaResource(type):
 
         try:
             # note: attribute is stored only if with_context keyword
-            #       argument is not specified explicitely. This way
+            #       argument is not specified explicitly. This way
             #       we are able to guess if proper warning need to be
             #       displayed to the user.
             # future: remove in 1.x

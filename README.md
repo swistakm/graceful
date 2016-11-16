@@ -220,11 +220,11 @@ should be aware of before submitting a pull request:
 
 * Only requests that have passing CI builds (Travis) will be merged.
 * Code is checked with `flakes8` and `pydocstyle` during build so this
-  implicitely means that compliance with PEP-8 and PEP-257 are mandatory.
+  implicitly means that compliance with PEP-8 and PEP-257 is mandatory.
 * No changes that decrease coverage will be merged.
 
 One thing: if you submit a PR please do not rebase it later unless you
-are asked for that explicitely. Reviewing pull requests that suddenly had 
+are asked for that explicitly. Reviewing pull requests that suddenly had
 their history rewritten just drives me crazy.
 
 
