@@ -38,7 +38,7 @@ simple resource modification handlers:
 
 These handlers do not have the direct access to the request and response
 objects (the ``req`` and ``resp`` arguments). In most cases this is not a
-proble,. Access to the request object is required usually in order to
+problem. Access to the request object is required usually in order to
 retrieve client representation of the resource, GET parameters, and headers.
 These things should be completely covered with the proper usage of
 :ref:`parameter classes <guide-parameters>` and
