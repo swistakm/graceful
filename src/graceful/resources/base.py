@@ -91,6 +91,8 @@ class BaseResource(metaclass=MetaResource):
         default='0'
     )
 
+    #: Instance of serializer class used to serialize/deserialize and
+    #: validate resource representations.
     serializer = None
 
     @property
@@ -170,6 +172,9 @@ class BaseResource(metaclass=MetaResource):
         Returns:
             dict: dictionary with resource descritpion information
 
+        .. versionchanged:: 0.2.0
+           The `req` and `resp` parameters became optional to ease the
+           implementation of application-level documentation generators.
         """
         description = {
             'params': OrderedDict([
@@ -204,6 +209,10 @@ class BaseResource(metaclass=MetaResource):
         Returns:
             None
 
+
+        .. versionchanged:: 0.2.0
+           Default ``OPTIONS`` responses include ``Allow`` header with list of
+           allowed HTTP methods.
         """
         resp.set_header('Allow', ', '.join(self.allowed_methods()))
         resp.body = json.dumps(self.describe(req, resp))

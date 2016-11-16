@@ -63,7 +63,11 @@ class BaseField:
 
     """
 
+    #: Two-tuple ``(label, url)`` pointing to represented type specification
+    #: (for documentation).
     spec = None
+
+    #: String label of represented type (for documentation).
     type = None
 
     def __init__(

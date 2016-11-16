@@ -42,7 +42,11 @@ class BaseParam:
             list-compatible data type by overriding the ``container`` class
             attribute. See: :ref:`guide-params-custom-containers`.
 
+            .. versionadded:: 0.1.0
+
         validators (list): list of validator callables.
+
+            .. versionadded:: 0.2.0
 
     .. note::
         If ``many=False`` and client inlcudes multiple values for this
@@ -68,9 +72,18 @@ class BaseParam:
 
     """
 
+    #: Two-tuple ``(label, url)`` pointing to represented type specification
+    #: (for documentation).
     spec = None
+
+    #: String label of represented type (for documentation).
     type = None
 
+    #: Allows to specify
+    #: :ref:`custom containers <guide-params-custom-containers>`
+    #: on ``many=True`` params in user-defined parameter classes.
+    #:
+    #: .. versionadded:: 0.2.0
     container = list
 
     def __init__(
@@ -267,6 +280,8 @@ class DecimalParam(BaseParam):
 
 class BoolParam(BaseParam):
     """Describes parameter with value expressed as bool.
+
+    .. versionadded:: 0.2.0
 
     Accepted string values for boolean parameters are as follows:
 
