@@ -32,14 +32,14 @@ gitter chat until we decide on something new.
 Chat is available [here](https://gitter.im/graceful-for-falcon/Lobby).
 
 
-# python3 only
+## python3 only
 
 **Important**: `graceful` is python3 exclusive because **right now** should be
 a good time to forget about python2. There are no plans for making `graceful` 
 python2 compatibile although it would be pretty straightforward do do so with
 existing tools (like six).
 
-# usage
+## usage
 For extended tutorial and more information please refer to
 [guide](http://graceful.readthedocs.org/en/latest/guide/) included in
 documentation. 
@@ -212,7 +212,7 @@ content-type: application/json
 ```
 
 
-# contributing
+## contributing
 
 Any contribution is welcome. Issues, suggestions, pull requests - whatever. 
 There is only short set of rules that guide this project development you
@@ -228,6 +228,6 @@ are asked for that explicitely. Reviewing pull requests that suddenly had
 their history rewritten just drives me crazy.
 
 
-# license
+## license
 
 See `LICENSE` file.

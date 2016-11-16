@@ -7,7 +7,7 @@ from graceful.validators import min_validator, max_validator
 class BaseField:
     """Base field class for subclassing.
 
-    To create new field type subclass `BaseField` and implement following
+    To create new field type subclass :any:`BaseField` and implement following
     methods:
 
     * ``from_representation()``: converts representation (used in
@@ -147,7 +147,7 @@ class BaseField:
         """Perform validation on value by running all field validators.
 
         Single validator is a callable that accepts one positional argument
-        and raises "ValidationError" when validation fails.
+        and raises :any:`ValidationError` when validation fails.
 
         Error message included in exception will be included in http error
         response

@@ -38,14 +38,18 @@ class BaseParam:
         many (str): set to ``True`` if multiple occurences of this parameter
             can be included in query string, as a result values for this
             parameter will be always included as a list in params dict.
-            Defaults to ``False``.
+            Defaults to ``False``. Instead of ``list`` you can use any
+            list-compatible data type by overriding the ``container`` class
+            attribute. See: :ref:`guide-params-custom-containers`.
 
-          .. note::
-              If ``many=False`` and client inlcudes multiple values for this
-              parameter in query string then only one of those values will be
-              returned, and it is undefined which one.
+        validators (list): list of validator callables.
 
-    Example:
+    .. note::
+        If ``many=False`` and client inlcudes multiple values for this
+        parameter in query string then only one of those values will be
+        returned, and it is undefined which one.
+
+    **Example:**
 
     .. code-block:: python
 
@@ -186,8 +190,8 @@ class BaseParam:
 class StringParam(BaseParam):
     r"""Describes parameter that will always be returned as-is (string).
 
-     Additional validation can be added to param instance using ``validators``
-     argument during initialization:
+    Additional validation can be added to param instance using ``validators``
+    argument during initialization:
 
     .. code-block:: python
 

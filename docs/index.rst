@@ -1,17 +1,16 @@
-graceful - falcon REST done with grace
-======================================
-
-
-Contents:
-=========
-
-.. toctree::
-   :maxdepth: 2
-
-   guide/index.rst
-   reference/modules.rst
 
 .. include:: readme.rst
+
+
+Contents
+========
+
+.. toctree::
+   :maxdepth: 3
+
+   readme.rst
+   guide/index.rst
+   reference/modules.rst
 
 
 Indices and tables

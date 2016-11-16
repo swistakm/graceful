@@ -76,7 +76,27 @@ suppress_warnings = ['image.nonlocal_uri']
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+# html_theme = 'sphinx_rtd_theme'
+html_theme = 'alabaster'
+
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+        'donate.html',
+    ]
+}
+
+html_theme_options = {
+    'github_user': 'swistakm',
+    'github_repo': 'graceful',
+    'github_button': True,
+    'github_type': 'star',
+    'sidebar_includehidden': True,
+    'description': "elegant Python REST toolkit built on top of falcon",
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -118,7 +138,7 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-# Napoleon settings
+# Napoleon & autodoc settings
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 napoleon_include_private_with_doc = False
@@ -127,5 +147,7 @@ napoleon_use_admonition_for_examples = False
 napoleon_use_admonition_for_notes = False
 napoleon_use_admonition_for_references = False
 napoleon_use_ivar = False
-napoleon_use_param = True
+napoleon_use_param = False
 napoleon_use_rtype = False
+
+autodoc_member_order = 'bysource'

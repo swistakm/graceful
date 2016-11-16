@@ -100,7 +100,8 @@ Example usage:
         def update(self, params, meta, foo_id, **kwargs):
             return db.Foo.update(id=foo_id)
 
-    # note url template param that will be passed to `FooResource.get_object()`
+    # note: url template kwarg that will be passed to
+    #       `FooResource.get_object()`
     api.add_route('foo/{foo_id}', FooResource())
 
 

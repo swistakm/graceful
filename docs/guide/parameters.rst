@@ -316,6 +316,7 @@ Such approach your will eventually make your code and API:
   ``many=True`` to declaration of parameter that represents some data container
 
 
+.. _guide-params-custom-containers:
 
 Custom containers
 ^^^^^^^^^^^^^^^^^
