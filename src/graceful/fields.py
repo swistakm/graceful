@@ -4,7 +4,7 @@ import inspect
 from graceful.validators import min_validator, max_validator
 
 
-class BaseField():
+class BaseField:
     """Base field class for subclassing.
 
     To create new field type subclass `BaseField` and implement following

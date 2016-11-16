@@ -167,7 +167,7 @@ def test_serializer_set_attribute():
 
     # test normal objects atrributes are attributes indeed
     # in scope of this method
-    class SomeObject():
+    class SomeObject:
         def __init__(self):
             self.foo = None
 
@@ -185,7 +185,7 @@ def test_serializer_get_attribute():
 
     # test normal objects atrributes are attributes indeed
     # in scope of this method
-    class SomeObject():
+    class SomeObject:
         def __init__(self):
             self.foo = 'bar'
 

@@ -5,7 +5,7 @@ import binascii
 import inspect
 
 
-class BaseParam():
+class BaseParam:
     """Base parameter class for subclassing.
 
     To create new parameter type subclass ``BaseParam`` and implement

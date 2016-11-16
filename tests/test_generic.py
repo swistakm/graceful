@@ -340,7 +340,7 @@ class PaginationTestsMixin:
         assert len(body['content']) == 0
 
 
-class CreateTestsMixin():
+class CreateTestsMixin:
     """
     Contains all tests that should be performed on resource that suports create
     """

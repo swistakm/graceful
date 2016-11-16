@@ -4,7 +4,7 @@ from graceful.parameters import IntParam
 from graceful.resources.base import BaseResource
 
 
-class BaseMixin():
+class BaseMixin:
     """Base mixin class."""
 
     def handle(self, handler, req, resp, **kwargs):
