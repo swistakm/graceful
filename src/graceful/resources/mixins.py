@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from functools import partial
+
 import falcon
 from graceful.parameters import IntParam
 from graceful.resources.base import BaseResource
@@ -32,6 +34,10 @@ class BaseMixin:
              Content dictionary (preferably resource representation).
         """
         params = self.require_params(req)
+
+        # future: remove in 1.x
+        if getattr(self, '_with_context', False):
+            handler = partial(handler, context=req.context)
 
         meta, content = self.require_meta_and_content(
             handler, params, **kwargs

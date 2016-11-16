@@ -2,6 +2,7 @@
 import json
 import inspect
 from collections import OrderedDict
+from warnings import warn
 
 from falcon import errors
 import falcon
@@ -64,15 +65,28 @@ class MetaResource(type):
 
         return OrderedDict(params)
 
-    def __new__(mcs, name, bases, namespace):
+    def __new__(mcs, name, bases, namespace, **kwargs):
         """Create new class object instance and alter its namespace."""
         namespace[mcs._params_storage_key] = mcs._get_params(bases, namespace)
-
         return super().__new__(
             # note: there is no need preserve order in namespace anymore so
             # we convert it explicitely to dict
-            mcs, name, bases, dict(namespace)
+            mcs, name, bases, dict(namespace),
         )
+
+    def __init__(cls, name, bases, namespace, **kwargs):
+        """Perform some additional class object initialization."""
+        super().__init__(name, bases, namespace)
+
+        try:
+            # note: attribute is stored only if with_context keyword
+            #       argument is not specified explicitely. This way
+            #       we are able to guess if proper warning need to be
+            #       displayed to the user.
+            # future: remove in 1.x
+            cls._with_context = kwargs.pop('with_context')
+        except KeyError:
+            pass
 
 
 class BaseResource(metaclass=MetaResource):
@@ -81,6 +95,25 @@ class BaseResource(metaclass=MetaResource):
     This base class handles resource responses, parameter deserialization,
     and validation of request included representations if serializer is
     defined.
+
+    All custom resource classes based on ``BaseResource`` accept additional
+    ``with_context`` keyword argument:
+
+
+    .. code-block:: python
+
+        class MyResource(BaseResource, with_context=True):
+            ...
+
+    The ``with_context`` argument tells if resource modification methods
+    (metods injected with mixins - list/create/update/etc.) should accept
+    the ``context`` argument in their signatures. For more details
+    see :ref:`guide-context-aware-resources` section of documentation. The
+    default value for ``with_context`` class keyword argument is ``False``.
+
+    .. versionadded:: 0.3.0
+
+        The ``with_context`` keyword argument.
 
     """
 
@@ -94,6 +127,29 @@ class BaseResource(metaclass=MetaResource):
     #: Instance of serializer class used to serialize/deserialize and
     #: validate resource representations.
     serializer = None
+
+    def __new__(cls, *args, **kwargs):
+        """Do some sanity checks before resource instance initialization."""
+        instance = super().__new__(cls)
+
+        if not hasattr(instance, '_with_context'):
+            # note: warnings is displayed only if user did not specify
+            #       explicitly that he want's his resource to not accept
+            #       the context keyword argument.
+            # future: remove in 1.x
+            warn(
+                """
+                Class {} was defined without the 'with_context' keyword
+                argument. This means that its resource manipulation
+                methods (list/retrieve/create etc.) won't receive context
+                keyword argument.
+
+                This behaviour will change in 1.x version of graceful
+                (please refer to documentation).
+                """.format(cls),
+                FutureWarning
+            )
+        return instance
 
     @property
     def params(self):

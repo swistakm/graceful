@@ -1,3 +1,5 @@
+.. _guide-serializers:
+
 Serializers and fields
 ----------------------
 
