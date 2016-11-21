@@ -14,6 +14,8 @@ class BaseUserStorage:
     to have compatible API. Custom authentication middlewares do not need
     to use storages and even they use any they do not need to have compatible
     interfaces.
+
+    .. versionadded:: 0.3.0
     """
 
     def get_user(
@@ -47,6 +49,8 @@ class DummyUserStorage(BaseUserStorage):
 
     Args:
         user: user to return. Defaults to ``None`` (will never authenticate).
+
+    .. versionadded:: 0.3.0
     """
 
     def __init__(self, user=None):
@@ -72,6 +76,8 @@ class IPWhitelistStorage(BaseUserStorage):
         ip_range: any object that supports ``in`` operator in order to check
             if identifier falls into specified whitelist. Tip: use ``iptools``.
         user: default user to return on successful authentication.
+
+    .. versionadded:: 0.3.0
     """
 
     def __init__(self, ip_range, user):
@@ -112,6 +118,8 @@ class RedisUserStorage(BaseUserStorage):
         key_prefix: key prefix used to store client identities.
         serialization: serialization object/module that uses the
             ``dumps()``/``loads()`` protocol. Defaults to ``json``.
+
+    .. versionadded:: 0.3.0
     """
 
     def __init__(self, redis, key_prefix='users', serialization=None):
@@ -184,6 +192,8 @@ class BaseAuthenticationMiddleware:
         name (str): custom name of the authentication middleware useful
             for handling custom user storage backends. Defaults to middleware
             class name.
+
+    .. versionadded:: 0.3.0
     """
 
     #: challenge returned in WWW-Authenticate header on non authorized
@@ -310,7 +320,6 @@ class Basic(BaseAuthenticationMiddleware):
 
         username, _, password = identifier.partition(":")
 
-
     Args:
         realm (str): name of the protected realm. This can be only alphanumeric
             string with spaces (see: the ``REALM_RE`` pattern).
@@ -319,6 +328,8 @@ class Basic(BaseAuthenticationMiddleware):
         name (str): custom name of the authentication middleware useful
             for handling custom user storage backends. Defaults to middleware
             class name.
+
+    .. versionadded:: 0.3.0
 
     .. _RFC-7617: https://tools.ietf.org/html/rfc7616
     """
@@ -397,6 +408,8 @@ class XAPIKey(BaseAuthenticationMiddleware):
 
     This middleware **must** be configured with ``user_storage`` that provides
     access to database of client API keys and their identities.
+
+    .. versionadded:: 0.3.0
     """
 
     challenge = 'X-Api-Key'
@@ -430,6 +443,8 @@ class Token(BaseAuthenticationMiddleware):
 
     This middleware **must** be configured with ``user_storage`` that provides
     access to database of client tokens and their identities.
+
+    .. versionadded:: 0.3.0
     """
 
     challenge = 'Token'
@@ -483,6 +498,8 @@ class XForwardedFor(BaseAuthenticationMiddleware):
         can be trusted. This requires proper reverse proxy and network
         configuration. It is also recommended to at least use the static
         :any:`IPWhitelistStorage` as the user storage.
+
+    .. versionadded:: 0.3.0
     """
 
     challenge = None
@@ -532,6 +549,8 @@ class Anonymous(BaseAuthenticationMiddleware):
 
     Args:
         user: default anonymous user object.
+
+    .. versionadded:: 0.3.0
     """
 
     challenge = None
