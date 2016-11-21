@@ -15,6 +15,7 @@ Features:
 
 * generic classes for list and single object resources
 * simple but extendable pagination
+* simple but extendable authentication and authorization
 * structured responses with content/meta separation
 * declarative fields and parameters
 * self-descriptive-everything: API description accessible both in python and

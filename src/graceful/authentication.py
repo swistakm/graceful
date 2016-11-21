@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import json
+import base64
+import binascii
+import re
 
-from falcon import HTTPMissingHeader
+from falcon import HTTPMissingHeader, HTTPBadRequest
 
 
 class BaseUserStorage:
@@ -9,19 +12,19 @@ class BaseUserStorage:
 
     All built in graceful authentication middleware classes expect user storage
     to have compatible API. Custom authentication middlewares do not need
-    to use storages and even they use any they do not neet to have compatible
+    to use storages and even they use any they do not need to have compatible
     interfaces.
     """
 
     def get_user(
-        self, identified_with, identity, req, resp, resource, uri_kwargs
+        self, identified_with, identifier, req, resp, resource, uri_kwargs
     ):
         """Get user from the storage.
 
         Args:
-            identified_with (str): name of the authentication middleware used
-                to identify the user.
-            identify (str): string that identifies the user (it is specific
+            identified_with (str): instance of the authentication middleware
+                that provided the ``identifier`` value.
+            identifier (str): string that identifies the user (it is specific
                 for every authentication middleware implementation).
             req (falcon.Request): the request object.
             resp (falcon.Response): the response object.
@@ -51,7 +54,7 @@ class DummyUserStorage(BaseUserStorage):
         self.user = user
 
     def get_user(
-        self, identified_with, identity, req, resp, resource, uri_kwargs
+        self, identified_with, identifier, req, resp, resource, uri_kwargs
     ):
         """Return default user object."""
         return self.user
@@ -61,11 +64,13 @@ class IPWhitelistStorage(BaseUserStorage):
     """Simple storage dedicated for :any:`XForwardedFor` authentication.
 
     This storage expects that is used with authentication middleware that
-    returns client address from its ``identify()`` method.
+    returns client address from its ``identify()`` method. For example usage
+    see :any:`XForwardedFor`.
+
 
     Args:
         ip_range: any object that supports ``in`` operator in order to check
-            if identity falls into specified whitelist. Tip: use ``iptools``.
+            if identifier falls into specified whitelist. Tip: use ``iptools``.
         user: default user to return on successful authentication.
     """
 
@@ -75,24 +80,32 @@ class IPWhitelistStorage(BaseUserStorage):
         self.user = user
 
     def get_user(
-        self, identified_with, identity, req, resp, resource, uri_kwargs
+        self, identified_with, identifier, req, resp, resource, uri_kwargs
     ):
         """Return default user object.
 
         .. note::
-            This implementation expects that ``identity`` is an user address.
+            This implementation expects that ``identifier`` is an user address.
         """
-        if identity in self.ip_range:
+        if identifier in self.ip_range:
             return self.user
 
 
 class RedisUserStorage(BaseUserStorage):
-    """Basic API key identity storage in Redis.
+    """Basic user storage using Redis as authentication backend.
 
     Client identities are stored as string under keys mathing following
-    template:
+    template::
 
-        <key_prefix>:<identified_with>:<identity>
+        <key_prefix>:<identified_with>:<identifier>
+
+    Where:
+
+    * ``<key_prefix>`` is the configured key prefix (same as the initialization
+      argument,
+    * ``<identified_with>`` is the name of authentication middleware that
+      provided user identifier,
+    * ``<identifier>`` is the string that identifies the user.
 
     Args:
         redis: Redis client instance
@@ -101,40 +114,41 @@ class RedisUserStorage(BaseUserStorage):
             ``dumps()``/``loads()`` protocol. Defaults to ``json``.
     """
 
-    def __init__(self, redis, key_prefix='users', serialization=json):
+    def __init__(self, redis, key_prefix='users', serialization=None):
         """Initialize redis user storage."""
         self.redis = redis
         self.key_prefix = key_prefix
-        self.serialization = serialization
+        self.serialization = serialization or json
 
-    def _get_storage_key(self, identified_with, identity):
-        """Consistently get Redis key name of identity string for api key.
+    def _get_storage_key(self, identified_with, identifier):
+        """Consistently get Redis key name of identifier string for api key.
 
         Args:
             identified_with (str): name of the authentication middleware used
                 to identify the user.
-            identity (str): user identity string
+            identifier (str): user identifier string
 
         Return:
             str: user object key name
         """
-        return ':'.join((self.key_prefix, identified_with, identity))
+        return ':'.join((self.key_prefix, identified_with, identifier))
 
     def get_user(
-        self, identified_with, identity, req, resp, resource, uri_kwargs
+        self, identified_with, identifier, req, resp, resource, uri_kwargs
     ):
-        """Get identity string for given API key.
+        """Get user object for given identifier.
 
         Args:
             identified_with (str): name of the authentication middleware used
                 to identify the user.
-            identity (str): user identity.
+            identifier: middleware specifix user identifier (string in case of
+                all built in authentication middleware classes).
 
         Returns:
-            dict: user objet stored in Redis if it exists, otherwise ``None``
+            dict: user object stored in Redis if it exists, otherwise ``None``
         """
         stored_value = self.redis.get(
-            self._get_storage_key(identified_with, identity)
+            self._get_storage_key(identified_with, identifier)
         )
         if stored_value is not None:
             user = self.serialization.loads(stored_value.decode())
@@ -143,8 +157,8 @@ class RedisUserStorage(BaseUserStorage):
 
         return user
 
-    def register(self, identified_with, identity, user):
-        """Register new key for given client identity.
+    def register(self, identified_with, identifier, user):
+        """Register new key for given client identifier.
 
         This is only a helper method that allows to register new
         user objects for client identities (keys, tokens, addresses etc.).
@@ -152,11 +166,11 @@ class RedisUserStorage(BaseUserStorage):
         Args:
             identified_with (str): name of the authentication middleware used
                 to identify the user.
-            identity (str): user identity.
+            identifier (str): user identifier.
             user (str): user object to be stored in the backend.
         """
         self.redis.set(
-            self._get_storage_key(identified_with, identity),
+            self._get_storage_key(identified_with.name, identifier),
             self.serialization.dumps(user).encode(),
         )
 
@@ -166,7 +180,7 @@ class BaseAuthenticationMiddleware:
 
     Args:
         user_storage (BaseUserStorage): a storage object used to retrieve
-            user object using their identity lookup.
+            user object using their identifier lookup.
         name (str): custom name of the authentication middleware useful
             for handling custom user storage backends. Defaults to middleware
             class name.
@@ -178,7 +192,7 @@ class BaseAuthenticationMiddleware:
 
     #: defines if Authentication middleware requires valid storage
     #: object to identify users
-    storage_required = False
+    only_with_storage = False
 
     def __init__(self, user_storage=None, name=None):
         """Initialize authentication middleware."""
@@ -187,7 +201,7 @@ class BaseAuthenticationMiddleware:
             name if name else self.__class__.__name__
         )
 
-        if self.storage_required and self.user_storage is None:
+        if self.only_with_storage and self.user_storage is None:
             raise ValueError(
                 "{} authentication middleware requires valid storage"
                 "".format(self.__class__.__name__)
@@ -208,8 +222,8 @@ class BaseAuthenticationMiddleware:
         if 'user' in req.context:
             return
 
-        identity = self.identify(req, resp, resource, uri_kwargs)
-        user = self.try_storage(identity, req, resp, resource, uri_kwargs)
+        identifier = self.identify(req, resp, resource, uri_kwargs)
+        user = self.try_storage(identifier, req, resp, resource, uri_kwargs)
 
         if user is not None:
             req.context['user'] = user
@@ -236,11 +250,11 @@ class BaseAuthenticationMiddleware:
         """
         raise NotImplementedError
 
-    def try_storage(self, identity, req, resp, resource, uri_kwargs):
+    def try_storage(self, identifier, req, resp, resource, uri_kwargs):
         """Try to find user in configured user storage object.
 
         Args:
-            identity (str): user identity.
+            identifier (str): user identifier.
 
         Returns:
             user object
@@ -249,18 +263,17 @@ class BaseAuthenticationMiddleware:
         #       authenticate user.
         if self.user_storage is not None:
             user = self.user_storage.get_user(
-                self.name, identity, req, resp, resource, uri_kwargs
+                self, identifier, req, resp, resource, uri_kwargs
             )
 
         # note: some authentication middleware classes may not require
         #       to be initialized with their own user_storage. In such
         #       case this will always authenticate with "syntetic user"
-        #       if there is valid indentity.
-        # todo: consider renaming "storage_required" to something else
-        elif self.user_storage is None and not self.storage_required:
+        #       if there is a valid indentity.
+        elif self.user_storage is None and not self.only_with_storage:
             user = {
                 'identified_with': self.name,
-                'identity': identity
+                'identifier': identifier
             }
 
         else:
@@ -269,20 +282,129 @@ class BaseAuthenticationMiddleware:
         return user
 
 
+class Basic(BaseAuthenticationMiddleware):
+    """Authenticate user with Basic auth as specified by `RFC-7617`_.
+
+    Token authentication takes form of ``Authorization`` header in the
+    following form::
+
+        Authorization: Basic <credentials>
+
+    Whre `<credentials>` is base64 encoded username and password separated by
+    single colon charactes (refer to official RFC). Usernames must not contain
+    colon characters!
+
+    If client fails to authenticate on protected endpoint the response will
+    include following challenge::
+
+        WWW-Authenticate: Basic realm="<realm>"
+
+    Where ``<realm>`` is the value of configured authentication realm.
+
+    This middleware **must** be configured with ``user_storage`` that provides
+    access to database of client API keys and their identities. Additionally.
+    the ``identifier`` received by user storage in the ``get_user()`` method
+    is a decoded ``<username>:<password>`` string. If you need to apply any
+    hash function before hitting database in your user storage handler, you
+    should split it using followitg code::
+
+        username, _, password = identifier.partition(":")
+
+
+    Args:
+        realm (str): name of the protected realm. This can be only alphanumeric
+            string with spaces (see: the ``REALM_RE`` pattern).
+        user_storage (BaseUserStorage): a storage object used to retrieve
+            user object using their identifier lookup.
+        name (str): custom name of the authentication middleware useful
+            for handling custom user storage backends. Defaults to middleware
+            class name.
+
+    .. _RFC-7617: https://tools.ietf.org/html/rfc7616
+    """
+
+    only_with_storage = True
+
+    #: regular expression used to validate configured realm
+    REALM_RE = re.compile(r"^[\w ]+$")
+
+    def __init__(self, user_storage=None, name=None, realm="api"):
+        if not self.REALM_RE.match(realm):
+            raise ValueError(
+                "realm argument should match '{}' regular expression"
+                "".format(self.REALM_RE.pattern)
+            )
+
+        self.challenge = "Basic realm={}".format(realm)
+        super(Basic, self).__init__(user_storage, name)
+
+    def identify(self, req, resp, resource, uri_kwargs):
+        """Identify user using Authenticate header with Basic auth."""
+        header = req.get_header("Authorization", False)
+
+        auth = header.split(" ")
+
+        if auth is None or auth[0].lower != 'basic':
+            return None
+
+        if len(auth) != 2:
+            raise HTTPBadRequest(
+                "Invalid Authorization header",
+                "The Authorization header for Basic auth should be in form:\n"
+                "Authorization: Basic <base64-user-pass>"
+            )
+
+        user_pass = auth[1]
+
+        try:
+            decoded = base64.b64decode(user_pass).decode()
+
+        except (TypeError, UnicodeDecodeError, binascii.Error):
+            raise HTTPBadRequest(
+                "Invalid Authorization header",
+                "Credentials for Basic auth not correctly base64 encoded."
+            )
+
+        username, _, password = decoded.partition(":")
+        return username, password
+
+
 class XAPIKey(BaseAuthenticationMiddleware):
     """Authenticate user with ``X-Api-Key`` header.
 
-    This middleware must be configured with ``user_storage`` that provides
+    The X-Api-Key authentication takes a form of ``X-Api-Key`` header in the
+    following form::
+
+        X-Api-Key: <key_value>
+
+    Where ``<key_value>`` is a secret string known to both client and server.
+    Example of valid header::
+
+        X-Api-Key: 6fa459ea-ee8a-3ca4-894e-db77e160355e
+
+    If client fails to authenticate on protected endpoint the response will
+    include following challenge::
+
+        WWW-Authenticate: X-Api-Key
+
+    .. note::
+        This method functionally equivalent to :any:`Token` and is included
+        only to ease migration of old applications that could use such
+        authentication method in past. If you're building new API and require
+        only simple token-based authentication you should prefere
+        :any:`Token` middleware.
+
+    This middleware **must** be configured with ``user_storage`` that provides
     access to database of client API keys and their identities.
     """
 
     challenge = 'X-Api-Key'
-    storage_required = True
+    only_with_storage = True
 
     def identify(self, req, resp, resource, uri_kwargs):
         """Initialize X-Api-Key authentication middleware."""
         try:
-            return req.get_header('X-Api-Key', True)
+            return req.get_header('X-Api-Key', False)
         except (KeyError, HTTPMissingHeader):
             pass
 
@@ -290,28 +412,69 @@ class XAPIKey(BaseAuthenticationMiddleware):
 class Token(BaseAuthenticationMiddleware):
     """Authenticate user using Token authentication.
 
-    .. todo:: documentation and RFC link.
+    Token authentication takes form of ``Authorization`` header::
+
+        Authorization: Token <token_value>
+
+    Where ``<token_value>`` is a secret string known to both client and server.
+    Example of valid header::
+
+        Authorization: Token 6fa459ea-ee8a-3ca4-894e-db77e160355e
+
+    If client fails to authenticate on protected endpoint the response will
+    include following challenge::
+
+        WWW-Authenticate: Token
+
+
+    This middleware **must** be configured with ``user_storage`` that provides
+    access to database of client tokens and their identities.
     """
 
     challenge = 'Token'
-    storage_required = True
+    only_with_storage = True
 
     def identify(self, req, resp, resource, uri_kwargs):
-        """Identify user using Authenticate header with Token."""
-        try:
-            # todo: verify correctness
-            header = req.get_header('Authenticate', True)
-            parts = header.split(' ')
+        """Identify user using Authenticate header with Token auth."""
+        header = req.get_header('Authorization', False)
+        auth = header.split(' ')
 
-            if len(parts) == 2 and parts[0] == 'Token':
-                return parts[1]
+        if auth is None or auth[0].lower != 'Token':
+            return None
 
-        except (KeyError, HTTPMissingHeader):
-            pass
+        if len(auth) != 2:
+            raise HTTPBadRequest(
+                "Invalid Authorization header",
+                "The Authorization header for Token auth should be in form:\n"
+                "Authorization: Token <token_value>"
+            )
 
 
 class XForwardedFor(BaseAuthenticationMiddleware):
     """Authenticate user with ``X-Forwarded-For`` header or remote address.
+
+    This authentication middleware is usually used with the
+    :any:`IPWhitelistStorage` e.g:
+
+    .. code-block:: python
+
+        from iptools import IPRangeList
+        import falcon
+
+        from graceful import authentication
+
+        IP_WHITELIST = IpRangeList(
+            '127.0.0.1',
+            # ...
+        )
+
+        auth_middleware = authentication.XForwardedFor(
+            user_storage=authentication.IPWhitelistStorage(
+                IP_WHITELIST, user={"username": "internal"
+            )
+        )
+
+        api = application = falcon.API(middleware=[auth_middleware])
 
     .. note::
         Using this middleware class is **highly unrecommended** if you
@@ -322,7 +485,7 @@ class XForwardedFor(BaseAuthenticationMiddleware):
     """
 
     challenge = None
-    storage_required = False
+    only_with_storage = False
 
     @staticmethod
     def _get_client_address(req):
@@ -354,13 +517,16 @@ class Anonymous(BaseAuthenticationMiddleware):
     """Dummy authentication middleware that authenticates every request.
 
     It makes every every request authenticated with default value of
-    anonymous user.
+    anonymous user. This authentication middleware may be used in order
+    to simplify custom authorization code since it will ensure that
+    every request context will have the ``'user'`` variable defined.
 
     .. note::
         This middleware will always add the default user to the request
         context if no other previous authentication middleware resolved.
         So if this middleware is used it makes no sense to:
-        * Use the :any:`is_authenticated` decorator.
+
+        * Use the :any:`authentication_required` decorator.
         * Define any other authentication middleware after this one.
 
     Args:
@@ -368,7 +534,7 @@ class Anonymous(BaseAuthenticationMiddleware):
     """
 
     challenge = None
-    storage_required = True
+    only_with_storage = True
 
     def __init__(self, user):
         """Initialize anonymous authentication middleware."""

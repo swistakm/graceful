@@ -11,6 +11,7 @@ Graceful guide
    generic-resources
    parameters
    serializers
+   auth
    working-with-resources
    content-types
    documenting-your-api
