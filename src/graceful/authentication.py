@@ -329,6 +329,7 @@ class Basic(BaseAuthenticationMiddleware):
     REALM_RE = re.compile(r"^[\w ]+$")
 
     def __init__(self, user_storage=None, name=None, realm="api"):
+        """Initialize middleware and validate realm string."""
         if not self.REALM_RE.match(realm):
             raise ValueError(
                 "realm argument should match '{}' regular expression"
