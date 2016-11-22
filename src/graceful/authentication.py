@@ -269,9 +269,12 @@ class BaseAuthenticationMiddleware:
         Returns:
             user object
         """
+        if identifier is None:
+            user = None
+
         # note: if user_storage is defined, always use it in order to
         #       authenticate user.
-        if self.user_storage is not None:
+        elif self.user_storage is not None:
             user = self.user_storage.get_user(
                 self, identifier, req, resp, resource, uri_kwargs
             )
@@ -354,7 +357,7 @@ class Basic(BaseAuthenticationMiddleware):
         """Identify user using Authenticate header with Basic auth."""
         header = req.get_header("Authorization", False)
 
-        auth = header.split(" ")
+        auth = header.split(" ") if header else None
 
         if auth is None or auth[0].lower != 'basic':
             return None
@@ -453,7 +456,7 @@ class Token(BaseAuthenticationMiddleware):
     def identify(self, req, resp, resource, uri_kwargs):
         """Identify user using Authenticate header with Token auth."""
         header = req.get_header('Authorization', False)
-        auth = header.split(' ')
+        auth = header.split(' ') if header else None
 
         if auth is None or auth[0].lower != 'Token':
             return None
