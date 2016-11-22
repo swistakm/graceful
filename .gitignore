@@ -62,3 +62,6 @@ target/
 
 # system dependent
 .DS_Store
+
+# pycharm config files
+.idea

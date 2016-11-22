@@ -5,8 +5,8 @@
 
 # graceful
 
-`graceful` is elegant Python REST toolkit built on top of
-[falcon](http://github.com/falconry/falcon). It is highly inspired
+`graceful` is an elegant Python REST toolkit built on top of
+[falcon](http://github.com/falconry/falcon) framework. It is highly inspired
 by [Django REST framework](http://www.django-rest-framework.org/) - mostly by
 how object serialization is done but more emphasis here is put on API to
 be self-descriptive.
@@ -36,7 +36,7 @@ Chat is available [here](https://gitter.im/graceful-for-falcon/Lobby).
 
 **Important**: `graceful` is python3 exclusive because **right now** should be
 a good time to forget about python2. There are no plans for making `graceful` 
-python2 compatibile although it would be pretty straightforward do do so with
+python2 compatible although it would be pretty straightforward to do so with
 existing tools (like six).
 
 ## usage
