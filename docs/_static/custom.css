@@ -23,7 +23,7 @@ dl + dl.class {
 /* reformat class attributes ... */
 /* ... to be close together ... */
 dl.attribute + dl.attribute {
-    padding-top: 0;
+    margin-top: 0;
 }
 /* ... to have a pseudo-heading ... */
 dl.attribute:first-of-type:before {
