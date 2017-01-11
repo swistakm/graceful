@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 This scripts handles conversion of Markdown README into rst for inclusion
 in Sphinx documentation.

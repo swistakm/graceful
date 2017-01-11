@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 
 from falcon import Request, Response

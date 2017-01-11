@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import re
 
 from graceful.errors import ValidationError

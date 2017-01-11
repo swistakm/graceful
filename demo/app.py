@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import falcon
 
 from graceful.serializers import BaseSerializer

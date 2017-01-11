@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ This module tests basic Serializer API behaviour.
 
 All tested serializer classes should be defined within tests because

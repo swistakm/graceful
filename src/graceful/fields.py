@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import inspect
 
 from graceful.validators import min_validator, max_validator

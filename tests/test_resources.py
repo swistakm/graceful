@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import copy
 import json
 from collections.abc import Iterable
