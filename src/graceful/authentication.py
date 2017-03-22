@@ -420,7 +420,7 @@ class XAPIKey(BaseAuthenticationMiddleware):
     def identify(self, req, resp, resource, uri_kwargs):
         """Initialize X-Api-Key authentication middleware."""
         try:
-            return req.get_header('X-Api-Key', False)
+            return req.get_header('X-Api-Key', True)
         except (KeyError, HTTPMissingHeader):
             pass
 
@@ -467,6 +467,8 @@ class Token(BaseAuthenticationMiddleware):
                 "Authorization: Token <token_value>"
             )
 
+        return auth[1]
+
 
 class XForwardedFor(BaseAuthenticationMiddleware):
     """Authenticate user with ``X-Forwarded-For`` header or remote address.
@@ -488,7 +490,7 @@ class XForwardedFor(BaseAuthenticationMiddleware):
 
         auth_middleware = authentication.XForwardedFor(
             user_storage=authentication.IPWhitelistStorage(
-                IP_WHITELIST, user={"username": "internal"
+                IP_WHITELIST, user={"username": "internal"}
             )
         )
 

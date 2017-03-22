@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
-from falcon.testing import StartResponseMock, create_environ
+from falcon.testing import StartResponseMock, create_environ, TestBase
 import pytest
 
 from falcon import API, HTTPUnauthorized
@@ -34,78 +34,141 @@ class ExampleStorage(authentication.BaseUserStorage):
             return self.user
 
 
-def simulate_request(api, path, **kwargs):
-    srmock = StartResponseMock()
-    result = api(create_environ(path=path, **kwargs), srmock)
-    return result, srmock
+def test_invalid_basic_auth_realm():
+    with pytest.raises(ValueError):
+        authentication.Basic(realm="Impro=per realm%%% &")
 
 
-@pytest.fixture(scope='module')
-def testing_user():
-    return {
+class AuthTestsMixin:
+    """ Test mixin that defines common routine for testing auth classes.
+    """
+
+    class SkipTest(Exception):
+        """Raised when given tests is marked to be skipped"""
+
+    route = '/foo/'
+    user = {
         "username": "foo",
         "details": "bar",
         "password": "secretP4ssw0rd"
     }
+    auth_storage = ExampleStorage(user['password'], user)
+    auth_middleware = authentication.Anonymous(user)
+
+    def get_authorized_headers(self):
+        raise NotImplementedError
+
+    def get_invalid_headers(self):
+        raise NotImplementedError
+
+    def get_unauthorized_headers(self):
+        return {}
+
+    def setUp(self):
+        super().setUp()
+        self.api = API(middleware=self.auth_middleware)
+        self.api.add_route(self.route, ExampleResource())
+
+    def test_unauthorized(self):
+        try:
+            self.simulate_request(
+                self.route, decode='utf-8', method='GET',
+                headers=self.get_unauthorized_headers()
+            )
+            assert self.srmock.status == status_codes.HTTP_UNAUTHORIZED
+        except self.SkipTest:
+            pass
+
+    def test_authorized(self):
+        try:
+            self.simulate_request(
+                self.route, decode='utf-8', method='GET',
+                headers=self.get_authorized_headers()
+            )
+            assert self.srmock.status == status_codes.HTTP_OK
+        except self.SkipTest:
+            pass
+
+    def test_bad_request(self):
+        try:
+            maybe_multiple_headers_sets = self.get_invalid_headers()
+
+            if isinstance(maybe_multiple_headers_sets, tuple):
+                header_sets = maybe_multiple_headers_sets
+
+            else:
+                header_sets = (maybe_multiple_headers_sets,)
+
+            for headers in header_sets:
+                self.simulate_request(
+                    self.route, decode='utf-8', method='GET',
+                    headers=headers
+                )
+                assert self.srmock.status == status_codes.HTTP_BAD_REQUEST
+        except self.SkipTest:
+            pass
 
 
-@pytest.fixture(scope='module')
-def auth_anonymous_app_route(testing_user):
-    route = '/foo/'
-    app = API(middleware=authentication.Anonymous(user=testing_user))
-    app.add_route(route, ExampleResource())
+class AnonymousAuthTestCase(AuthTestsMixin, TestBase):
+    auth_middleware = authentication.Anonymous(...)
 
-    return app, route
+    def get_authorized_headers(self):
+        return {}
+
+    def get_unauthorized_headers(self):
+        raise self.SkipTest
+
+    def get_invalid_headers(self):
+        raise self.SkipTest
 
 
-@pytest.fixture(scope='module')
-def auth_basic_app_route(testing_user):
-    route = '/foo/'
+class BasicAuthTestCase(AuthTestsMixin, TestBase):
+    auth_middleware = authentication.Basic(AuthTestsMixin.auth_storage)
 
-    app = API(
-        middleware=authentication.Basic(
-            ExampleStorage(testing_user['password'], testing_user)
+    def get_authorized_headers(self):
+        return {
+            "Authorization":
+                "Basic " + base64.b64encode(
+                    ":".join(
+                        [self.user['username'], self.user['password']]
+                    ).encode()
+                ).decode()
+        }
+
+    def get_invalid_headers(self):
+        return (
+            # to many header tokens
+            {"Authorization": "Basic Basic Basic"},
+            # non base64 decoded
+            {"Authorization": "Basic nonbase64decoded"}
         )
-    )
-    app.add_route(route, ExampleResource())
 
-    return app, route
+class TokenAuthTestCase(AuthTestsMixin, TestBase):
+    auth_middleware = authentication.Token(AuthTestsMixin.auth_storage)
 
+    def get_authorized_headers(self):
+        return {"Authorization": "Token " + self.user['password']}
 
-def test_authentication_required_unauthorized(req, resp):
-    resource = ExampleResource()
-
-    with pytest.raises(HTTPUnauthorized):
-        resource.on_get(req, resp)
+    def get_invalid_headers(self):
+        return {"Authorization": "Token Token Token"}
 
 
-def test_authentication_required_authorized(req, resp, testing_user):
-    req.context['user'] = testing_user
+class XAPIKeyAuthTestCase(AuthTestsMixin, TestBase):
+    auth_middleware = authentication.XAPIKey(AuthTestsMixin.auth_storage)
 
-    resource = ExampleResource()
-    resource.on_get(req, resp)
+    def get_authorized_headers(self):
+        return {"X-Api-Key": self.user['password']}
 
-
-def test_anonymous_auth(auth_anonymous_app_route):
-    app, route = auth_anonymous_app_route
-
-    result, srmock = simulate_request(app, route, method='GET')
-    assert srmock.status == status_codes.HTTP_OK
+    def get_invalid_headers(self):
+        raise self.SkipTest
 
 
-def test_basic_auth(auth_basic_app_route, testing_user):
-    app, route = auth_basic_app_route
+class XForwardedForAuthTestCase(AuthTestsMixin, TestBase):
+    auth_storage = authentication.IPWhitelistStorage(["127.100.100.1"], ...)
+    auth_middleware = authentication.XForwardedFor(auth_storage)
 
-    result, srmock = simulate_request(app, route, method='GET')
-    assert srmock.status == status_codes.HTTP_UNAUTHORIZED
+    def get_authorized_headers(self):
+        return {"X-Forwarded-For": "127.100.100.1"}
 
-    result, srmock = simulate_request(
-        app, route,
-        headers={"Authorization": "Basic " + base64.b64encode(
-            ":".join(
-                [testing_user['username'], testing_user['password']]
-            ).encode()
-        ).decode()},
-        method='GET',
-    )
-    assert srmock.status == status_codes.HTTP_OK
+    def get_invalid_headers(self):
+        raise self.SkipTest
