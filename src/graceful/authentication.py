@@ -356,10 +356,9 @@ class Basic(BaseAuthenticationMiddleware):
     def identify(self, req, resp, resource, uri_kwargs):
         """Identify user using Authenticate header with Basic auth."""
         header = req.get_header("Authorization", False)
-
         auth = header.split(" ") if header else None
 
-        if auth is None or auth[0].lower != 'basic':
+        if auth is None or auth[0].lower() != 'basic':
             return None
 
         if len(auth) != 2:
@@ -458,7 +457,7 @@ class Token(BaseAuthenticationMiddleware):
         header = req.get_header('Authorization', False)
         auth = header.split(' ') if header else None
 
-        if auth is None or auth[0].lower != 'Token':
+        if auth is None or auth[0].lower() != 'token':
             return None
 
         if len(auth) != 2:

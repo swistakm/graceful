@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import base64
+from falcon.testing import StartResponseMock, create_environ
 import pytest
 
-from falcon import testing, API, HTTPUnauthorized
+from falcon import API, HTTPUnauthorized
 from falcon import status_codes
 
 from graceful.resources.base import BaseResource
@@ -25,8 +26,7 @@ class ExampleStorage(authentication.BaseUserStorage):
         self, identified_with, identifier, req, resp, resource, uri_kwargs
     ):
         if isinstance(identified_with, authentication.Basic):
-            import ipdb; ipdb.set_trace()
-            *_, password_or_key = identifier.partition(":")
+            *_, password_or_key = identifier
         else:
             password_or_key = identifier
 
@@ -34,48 +34,42 @@ class ExampleStorage(authentication.BaseUserStorage):
             return self.user
 
 
+def simulate_request(api, path, **kwargs):
+    srmock = StartResponseMock()
+    result = api(create_environ(path=path, **kwargs), srmock)
+    return result, srmock
+
+
 @pytest.fixture(scope='module')
 def testing_user():
     return {
         "username": "foo",
-        "password": "bar",
+        "details": "bar",
+        "password": "secretP4ssw0rd"
     }
 
 
 @pytest.fixture(scope='module')
-def auth_anonymous_client(testing_user):
+def auth_anonymous_app_route(testing_user):
     route = '/foo/'
     app = API(middleware=authentication.Anonymous(user=testing_user))
     app.add_route(route, ExampleResource())
 
-    test_client = testing.TestClient(app)
-    test_client.user = testing_user
-    test_client.route = route
-    return test_client
+    return app, route
 
 
 @pytest.fixture(scope='module')
-def auth_basic_client(testing_user):
+def auth_basic_app_route(testing_user):
     route = '/foo/'
-
-    password = "secretP4ssw0rd"
-    username = "foo_bar"
 
     app = API(
         middleware=authentication.Basic(
-            ExampleStorage(password, testing_user)
+            ExampleStorage(testing_user['password'], testing_user)
         )
     )
     app.add_route(route, ExampleResource())
 
-    test_client = testing.TestClient(app)
-
-    test_client.user = testing_user
-    test_client.route = route
-    test_client.password = password
-    test_client.username = username
-
-    return test_client
+    return app, route
 
 
 def test_authentication_required_unauthorized(req, resp):
@@ -92,22 +86,26 @@ def test_authentication_required_authorized(req, resp, testing_user):
     resource.on_get(req, resp)
 
 
-def test_anonymous_auth(auth_anonymous_client):
-    result = auth_anonymous_client.simulate_get(auth_anonymous_client.route)
-    assert result.status == status_codes.HTTP_OK
+def test_anonymous_auth(auth_anonymous_app_route):
+    app, route = auth_anonymous_app_route
+
+    result, srmock = simulate_request(app, route, method='GET')
+    assert srmock.status == status_codes.HTTP_OK
 
 
-def test_basic_auth(auth_basic_client):
-    result = auth_basic_client.simulate_get(auth_basic_client.route)
-    assert result.status == status_codes.HTTP_UNAUTHORIZED
+def test_basic_auth(auth_basic_app_route, testing_user):
+    app, route = auth_basic_app_route
 
-    result = auth_basic_client.simulate_get(
-        auth_basic_client.route,
+    result, srmock = simulate_request(app, route, method='GET')
+    assert srmock.status == status_codes.HTTP_UNAUTHORIZED
+
+    result, srmock = simulate_request(
+        app, route,
         headers={"Authorization": "Basic " + base64.b64encode(
             ":".join(
-                [auth_basic_client.username, auth_basic_client.password]
+                [testing_user['username'], testing_user['password']]
             ).encode()
-        ).decode()}
-
+        ).decode()},
+        method='GET',
     )
-    assert result.status == status_codes.HTTP_UNAUTHORIZED
+    assert srmock.status == status_codes.HTTP_OK

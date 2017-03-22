@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 from functools import wraps
 from falcon import hooks, HTTPUnauthorized
+import falcon.version
+
+# todo: consider moving to `compat` module if we have to use more compat code
+FALCON_VERSION = tuple(map(int, falcon.version.__version__.split('.')))
 
 
 def _before(hook):
@@ -30,8 +34,10 @@ def authentication_required(req, resp, resource, uri_kwargs):
     .. versionadded:: 0.3.0
     """
     if 'user' not in req.context:
-        raise HTTPUnauthorized(
-            "Unauthorized",
-            "This resource requires authentication",
-            req.context.get('challenges', [])
-        )
+        args = ["Unauthorized", "This resource requires authentication"]
+
+        # compat: falcon >= 1.0.0 requires the list of challenges
+        if FALCON_VERSION >= (1, 0, 0):
+            args.append(req.context.get('challenges', []))
+
+        raise HTTPUnauthorized(*args)
