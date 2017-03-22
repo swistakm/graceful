@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import base64
-from falcon.testing import StartResponseMock, create_environ, TestBase
+
 import pytest
 
-from falcon import API, HTTPUnauthorized
+from falcon.testing import TestBase
+from falcon import API
 from falcon import status_codes
 
 from graceful.resources.base import BaseResource
@@ -39,12 +40,29 @@ def test_invalid_basic_auth_realm():
         authentication.Basic(realm="Impro=per realm%%% &")
 
 
+@pytest.mark.parametrize(
+    "auth_class", [
+        authentication.Basic,
+        authentication.Token,
+        authentication.XAPIKey,
+    ]
+)
+def test_auth_requires_storage(auth_class):
+    with pytest.raises(ValueError):
+        auth_class()
+
+
 class AuthTestsMixin:
     """ Test mixin that defines common routine for testing auth classes.
     """
 
     class SkipTest(Exception):
-        """Raised when given tests is marked to be skipped"""
+        """Raised when given tests is marked to be skipped
+
+        Note: we use this exception instead of self.skipTest() method because
+        this has slightly different semantics. We simply don't want to report
+        these tests as skipped.
+        """
 
     route = '/foo/'
     user = {
@@ -116,9 +134,11 @@ class AnonymousAuthTestCase(AuthTestsMixin, TestBase):
         return {}
 
     def get_unauthorized_headers(self):
+        # note: Anonymous always authenticates the user.
         raise self.SkipTest
 
     def get_invalid_headers(self):
+        # note: it is not possible to have invalid header for this auth.
         raise self.SkipTest
 
 
@@ -143,6 +163,7 @@ class BasicAuthTestCase(AuthTestsMixin, TestBase):
             {"Authorization": "Basic nonbase64decoded"}
         )
 
+
 class TokenAuthTestCase(AuthTestsMixin, TestBase):
     auth_middleware = authentication.Token(AuthTestsMixin.auth_storage)
 
@@ -160,6 +181,7 @@ class XAPIKeyAuthTestCase(AuthTestsMixin, TestBase):
         return {"X-Api-Key": self.user['password']}
 
     def get_invalid_headers(self):
+        # note: it is not possible to have invalid header for this auth.
         raise self.SkipTest
 
 
@@ -171,4 +193,51 @@ class XForwardedForAuthTestCase(AuthTestsMixin, TestBase):
         return {"X-Forwarded-For": "127.100.100.1"}
 
     def get_invalid_headers(self):
+        # note: it is not possible to have invalid header for this auth.
         raise self.SkipTest
+
+
+class XForwardedForWithoutStorageAuthTestCase(AuthTestsMixin, TestBase):
+    auth_middleware = authentication.XForwardedFor()
+
+    def get_authorized_headers(self):
+        return {"X-Forwarded-For": "127.0.0.1"}
+
+    def get_invalid_headers(self):
+        # note: it is not possible to have invalid header for this auth.
+        raise self.SkipTest
+
+
+class XForwardedForWithFallbackAuthTestCase(AuthTestsMixin, TestBase):
+    auth_middleware = authentication.XForwardedFor(
+        remote_address_fallback=True
+    )
+
+    def get_authorized_headers(self):
+        return {}
+
+    def get_unauthorized_headers(self):
+        raise self.SkipTest
+
+    def get_invalid_headers(self):
+        # note: it is not possible to have invalid header for this auth.
+        raise self.SkipTest
+
+
+class MultipleAuthTestCase(AuthTestsMixin, TestBase):
+    auth_middleware = [
+        authentication.Token(AuthTestsMixin.auth_storage),
+        authentication.Anonymous(...),
+        authentication.Basic(AuthTestsMixin.auth_storage),
+    ]
+
+    def get_unauthorized_headers(self):
+        # note: Anonymous will always authenticate the user as a fallback auth
+        raise self.SkipTest
+
+    def get_invalid_headers(self):
+        # this is invalid header for basic authentication
+        return {"Authorization": "Token Basic Basic"}
+
+    def get_authorized_headers(self):
+        return {"Authorization": "Token " + self.user['password']}

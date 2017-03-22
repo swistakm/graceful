@@ -289,7 +289,9 @@ class BaseAuthenticationMiddleware:
                 'identifier': identifier
             }
 
-        else:
+        else:  # pragma: nocover
+            # note: this should not happen if the base class is properly
+            #       initialized. Still, user can skip super().__init__() call.
             user = None
 
         return user
@@ -473,8 +475,15 @@ class Token(BaseAuthenticationMiddleware):
 class XForwardedFor(BaseAuthenticationMiddleware):
     """Authenticate user with ``X-Forwarded-For`` header or remote address.
 
+    Args:
+        remote_address_fallback (bool): fallback to ``REMOTE_ADDR`` value from
+            WSGI environment dictionary if ``X-Forwarded-For`` header is not
+            available. Defaults to False.
+
+
     This authentication middleware is usually used with the
     :any:`IPWhitelistStorage` e.g:
+
 
     .. code-block:: python
 
@@ -509,8 +518,12 @@ class XForwardedFor(BaseAuthenticationMiddleware):
     challenge = None
     only_with_storage = False
 
-    @staticmethod
-    def _get_client_address(req):
+    def __init__(self, user_storage=None, remote_address_fallback=False):
+        """Initialize middleware and set default arguments."""
+        super().__init__(user_storage)
+        self.remote_address_fallback = remote_address_fallback
+
+    def _get_client_address(self, req):
         """Get address from ``X-Forwarded-For`` header or use remote address.
 
         Remote address is used if the ``X-Forwarded-For`` header is not
@@ -524,11 +537,13 @@ class XForwardedFor(BaseAuthenticationMiddleware):
             str: client address.
         """
         try:
-            # in case our worker is behind reverse proxy
             forwarded_for = req.get_header('X-Forwarded-For', True)
             return forwarded_for.split(',')[0].strip()
-        except (KeyError, HTTPMissingHeader):  # pragma: nocover
-            return req.env.get('REMOTE_ADDR')
+        except (KeyError, HTTPMissingHeader):
+            return (
+                req.env.get('REMOTE_ADDR') if self.remote_address_fallback
+                else None
+            )
 
     def identify(self, req, resp, resource, uri_kwargs):
         """Identify client using his address."""
