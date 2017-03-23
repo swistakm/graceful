@@ -18,7 +18,7 @@ auth_storage = KeyValueUserStorage(Redis())
 
 
 @auth_storage.hash_identifier.register(Basic)
-def _(identified_with, identifier):
+def _basic(identified_with, identifier):
     return ":".join((
         identifier[0],
         hashlib.sha1(identifier[1].encode()).hexdigest()
@@ -26,7 +26,7 @@ def _(identified_with, identifier):
 
 
 @auth_storage.hash_identifier.register(Token)
-def _(identified_with, identifier):
+def _token(identified_with, identifier):
     return hashlib.sha1(identifier[1].encode()).hexdigest()
 
 api = application = falcon.API(
