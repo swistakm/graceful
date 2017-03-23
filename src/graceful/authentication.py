@@ -559,7 +559,9 @@ class XForwardedFor(BaseAuthenticationMiddleware):
     challenge = None
     only_with_storage = False
 
-    def __init__(self, user_storage=None, name=None, remote_address_fallback=False):
+    def __init__(
+        self, user_storage=None, name=None, remote_address_fallback=False
+    ):
         """Initialize middleware and set default arguments."""
         super().__init__(user_storage, name)
         self.remote_address_fallback = remote_address_fallback
