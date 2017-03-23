@@ -4,16 +4,23 @@ import base64
 import binascii
 import re
 
+try:
+    from functools import singledispatch
+except ImportError:  # pragma: nocover
+    # future: remove when dropping support for Python 3.3
+    # compat: backport of singledispatch module introduced in Python 3.4
+    from singledispatch import singledispatch
+
 from falcon import HTTPMissingHeader, HTTPBadRequest
 
 
 class BaseUserStorage:
     """Base user storage class that defines required API for user storages.
 
-    All built in graceful authentication middleware classes expect user storage
+    All built-in graceful authentication middleware classes expect user storage
     to have compatible API. Custom authentication middlewares do not need
-    to use storages and even they use any they do not need to have compatible
-    interfaces.
+    to use storages and even if they use any they do not need to have
+    compatible interfaces.
 
     .. versionadded:: 0.3.0
     """
@@ -37,7 +44,7 @@ class BaseUserStorage:
             the deserialized user object. Preferably a ``dict`` but it is
             application-specific.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: nocover
 
 
 class DummyUserStorage(BaseUserStorage):
@@ -64,13 +71,15 @@ class DummyUserStorage(BaseUserStorage):
         return self.user
 
 
-class IPWhitelistStorage(BaseUserStorage):
+class IPRangeWhitelistStorage(BaseUserStorage):
     """Simple storage dedicated for :any:`XForwardedFor` authentication.
 
     This storage expects that is used with authentication middleware that
     returns client address from its ``identify()`` method. For example usage
-    see :any:`XForwardedFor`.
-
+    see :any:`XForwardedFor`. Because it is IP range whitelist this storage
+    it cannot distinguish different users' IP and always returns default
+    user object. If you want to identify different users by their IP see
+    :any:`KVUserStorage`.
 
     Args:
         ip_range: any object that supports ``in`` operator in order to check
@@ -97,10 +106,10 @@ class IPWhitelistStorage(BaseUserStorage):
             return self.user
 
 
-class RedisUserStorage(BaseUserStorage):
-    """Basic user storage using Redis as authentication backend.
+class KeyValueUserStorage(BaseUserStorage):
+    """Basic user storage using any key-value store as authentication backend.
 
-    Client identities are stored as string under keys mathing following
+    Client identities are stored as string under keys matching following
     template::
 
         <key_prefix>:<identified_with>:<identifier>
@@ -108,13 +117,16 @@ class RedisUserStorage(BaseUserStorage):
     Where:
 
     * ``<key_prefix>`` is the configured key prefix (same as the initialization
-      argument,
+      argument),
     * ``<identified_with>`` is the name of authentication middleware that
       provided user identifier,
     * ``<identifier>`` is the string that identifies the user.
 
     Args:
-        redis: Redis client instance
+        kv_store: Key-value store client instance (e.g. Redis client object).
+            The ``kv_store`` must provide at least two methods: ``get(key)``
+            and ``set(key, value)``. Arguments and return values of these
+            methods must be strings.
         key_prefix: key prefix used to store client identities.
         serialization: serialization object/module that uses the
             ``dumps()``/``loads()`` protocol. Defaults to ``json``.
@@ -122,14 +134,38 @@ class RedisUserStorage(BaseUserStorage):
     .. versionadded:: 0.3.0
     """
 
-    def __init__(self, redis, key_prefix='users', serialization=None):
-        """Initialize redis user storage."""
-        self.redis = redis
+    def __init__(self, kv_store, key_prefix='users', serialization=None):
+        """Initialize kv_store user storage."""
+        self.kv_store = kv_store
         self.key_prefix = key_prefix
         self.serialization = serialization or json
 
     def _get_storage_key(self, identified_with, identifier):
-        """Consistently get Redis key name of identifier string for api key.
+        return ':'.join((
+            self.key_prefix, identified_with.name,
+            self.hash_identifier(identified_with, identifier),
+        ))
+
+    @staticmethod
+    @singledispatch
+    def hash_identifier(identified_with, identifier):
+        """Create hash from identifier to be used as a part of user lookup.
+
+        This method is a ``singledispatch`` function. It allows to register
+        new implementations for specific authentication middleware classes:
+
+        .. code-block:: python
+
+            from hashlib import sha1
+
+            from graceful.authentication import KeyValueUserStorage, Basic
+
+            @KeyValueUserStorage.hash_identifier.register(Basic)
+            def _(identified_with, identifier):
+                return ":".join((
+                    identifier[0],
+                    sha1(identifier[1].encode()).hexdigest(),
+                ))
 
         Args:
             identified_with (str): name of the authentication middleware used
@@ -137,9 +173,14 @@ class RedisUserStorage(BaseUserStorage):
             identifier (str): user identifier string
 
         Return:
-            str: user object key name
+            str: hashed identifier string
         """
-        return ':'.join((self.key_prefix, identified_with, identifier))
+        if isinstance(identifier, str):
+            return identifier
+        else:
+            raise TypeError(
+                "User storage does not support this kind of identifier"
+            )
 
     def get_user(
         self, identified_with, identifier, req, resp, resource, uri_kwargs
@@ -147,15 +188,15 @@ class RedisUserStorage(BaseUserStorage):
         """Get user object for given identifier.
 
         Args:
-            identified_with (str): name of the authentication middleware used
+            identified_with (object): authentication middleware used
                 to identify the user.
-            identifier: middleware specifix user identifier (string in case of
-                all built in authentication middleware classes).
+            identifier: middleware specifix user identifier (string or tuple
+                in case of all built in authentication middleware classes).
 
         Returns:
             dict: user object stored in Redis if it exists, otherwise ``None``
         """
-        stored_value = self.redis.get(
+        stored_value = self.kv_store.get(
             self._get_storage_key(identified_with, identifier)
         )
         if stored_value is not None:
@@ -172,13 +213,13 @@ class RedisUserStorage(BaseUserStorage):
         user objects for client identities (keys, tokens, addresses etc.).
 
         Args:
-            identified_with (str): name of the authentication middleware used
+            identified_with (object): authentication middleware used
                 to identify the user.
             identifier (str): user identifier.
             user (str): user object to be stored in the backend.
         """
-        self.redis.set(
-            self._get_storage_key(identified_with.name, identifier),
+        self.kv_store.set(
+            self._get_storage_key(identified_with, identifier),
             self.serialization.dumps(user).encode(),
         )
 
@@ -258,13 +299,13 @@ class BaseAuthenticationMiddleware:
         Returns:
             object: a user object (preferably a dictionary).
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: nocover
 
     def try_storage(self, identifier, req, resp, resource, uri_kwargs):
         """Try to find user in configured user storage object.
 
         Args:
-            identifier (str): user identifier.
+            identifier: user identifier.
 
         Returns:
             user object
@@ -285,7 +326,7 @@ class BaseAuthenticationMiddleware:
         #       if there is a valid indentity.
         elif self.user_storage is None and not self.only_with_storage:
             user = {
-                'identified_with': self.name,
+                'identified_with': self,
                 'identifier': identifier
             }
 
@@ -298,7 +339,7 @@ class BaseAuthenticationMiddleware:
 
 
 class Basic(BaseAuthenticationMiddleware):
-    """Authenticate user with Basic auth as specified by `RFC-7617`_.
+    """Authenticate user with Basic auth as specified by `RFC 7617`_.
 
     Token authentication takes form of ``Authorization`` header in the
     following form::
@@ -336,7 +377,7 @@ class Basic(BaseAuthenticationMiddleware):
 
     .. versionadded:: 0.3.0
 
-    .. _RFC-7617: https://tools.ietf.org/html/rfc7616
+    .. _RFC 7617: https://tools.ietf.org/html/rfc7616
     """
 
     only_with_storage = True
@@ -518,9 +559,9 @@ class XForwardedFor(BaseAuthenticationMiddleware):
     challenge = None
     only_with_storage = False
 
-    def __init__(self, user_storage=None, remote_address_fallback=False):
+    def __init__(self, user_storage=None, name=None, remote_address_fallback=False):
         """Initialize middleware and set default arguments."""
-        super().__init__(user_storage)
+        super().__init__(user_storage, name)
         self.remote_address_fallback = remote_address_fallback
 
     def _get_client_address(self, req):

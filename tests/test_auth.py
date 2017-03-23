@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import base64
-
 import pytest
+import hashlib
 
 from falcon.testing import TestBase
 from falcon import API
@@ -18,21 +18,29 @@ class ExampleResource(BaseResource, with_context=True):
         assert 'user' in req.context
 
 
-class ExampleStorage(authentication.BaseUserStorage):
-    def __init__(self, password_or_key, user):
-        self.password_or_key = password_or_key
-        self.user = user
+class ExampleKVUserStorage(authentication.KeyValueUserStorage):
+    class SimpleKVStore(dict):
+        def set(self, key, value):
+            self[key] = value
 
-    def get_user(
-        self, identified_with, identifier, req, resp, resource, uri_kwargs
-    ):
-        if isinstance(identified_with, authentication.Basic):
-            *_, password_or_key = identifier
-        else:
-            password_or_key = identifier
+    def __init__(self, data=None):
+        super().__init__(self.SimpleKVStore(data or {}))
 
-        if password_or_key == self.password_or_key:
-            return self.user
+    def clear(self):
+        self.kv_store.clear()
+
+
+@ExampleKVUserStorage.hash_identifier.register(authentication.Basic)
+def _(identified_with, identifier):
+    return ":".join([
+        identifier[0],
+        hashlib.sha1(identifier[1].encode()).hexdigest()
+    ])
+
+
+def test_default_kv_hashes_only_strings():
+    with pytest.raises(TypeError):
+        ExampleKVUserStorage.hash_identifier(None, [1, 2, 3, 4])
 
 
 def test_invalid_basic_auth_realm():
@@ -68,10 +76,15 @@ class AuthTestsMixin:
     user = {
         "username": "foo",
         "details": "bar",
-        "password": "secretP4ssw0rd"
+        "password": "secretP4ssw0rd",
+        "allowed_ip": "127.100.100.1",
+        "allowed_remote": "127.0.0.1",
+        "token": "s3cr3t70ken",
+        'allowed_ip_range': ['127.100.100.1'],
     }
-    auth_storage = ExampleStorage(user['password'], user)
-    auth_middleware = authentication.Anonymous(user)
+    ident_keys = ['password']
+    auth_storage = ExampleKVUserStorage()
+    auth_middleware = [authentication.Anonymous(user)]
 
     def get_authorized_headers(self):
         raise NotImplementedError
@@ -86,6 +99,16 @@ class AuthTestsMixin:
         super().setUp()
         self.api = API(middleware=self.auth_middleware)
         self.api.add_route(self.route, ExampleResource())
+
+        self.auth_storage.clear()
+
+        identity = [self.user[key] for key in self.ident_keys]
+
+        self.auth_storage.register(
+            self.auth_middleware[0],
+            identity[0] if len(identity) == 1 else identity,
+            self.user
+        )
 
     def test_unauthorized(self):
         try:
@@ -103,6 +126,7 @@ class AuthTestsMixin:
                 self.route, decode='utf-8', method='GET',
                 headers=self.get_authorized_headers()
             )
+
             assert self.srmock.status == status_codes.HTTP_OK
         except self.SkipTest:
             pass
@@ -128,7 +152,7 @@ class AuthTestsMixin:
 
 
 class AnonymousAuthTestCase(AuthTestsMixin, TestBase):
-    auth_middleware = authentication.Anonymous(...)
+    auth_middleware = [authentication.Anonymous(...)]
 
     def get_authorized_headers(self):
         return {}
@@ -143,7 +167,8 @@ class AnonymousAuthTestCase(AuthTestsMixin, TestBase):
 
 
 class BasicAuthTestCase(AuthTestsMixin, TestBase):
-    auth_middleware = authentication.Basic(AuthTestsMixin.auth_storage)
+    auth_middleware = [authentication.Basic(AuthTestsMixin.auth_storage)]
+    ident_keys = ['username', 'password']
 
     def get_authorized_headers(self):
         return {
@@ -165,20 +190,22 @@ class BasicAuthTestCase(AuthTestsMixin, TestBase):
 
 
 class TokenAuthTestCase(AuthTestsMixin, TestBase):
-    auth_middleware = authentication.Token(AuthTestsMixin.auth_storage)
+    auth_middleware = [authentication.Token(AuthTestsMixin.auth_storage)]
+    ident_keys = ['token']
 
     def get_authorized_headers(self):
-        return {"Authorization": "Token " + self.user['password']}
+        return {"Authorization": "Token " + self.user['token']}
 
     def get_invalid_headers(self):
         return {"Authorization": "Token Token Token"}
 
 
 class XAPIKeyAuthTestCase(AuthTestsMixin, TestBase):
-    auth_middleware = authentication.XAPIKey(AuthTestsMixin.auth_storage)
+    auth_middleware = [authentication.XAPIKey(AuthTestsMixin.auth_storage)]
+    ident_keys = ['token']
 
     def get_authorized_headers(self):
-        return {"X-Api-Key": self.user['password']}
+        return {"X-Api-Key": self.user['token']}
 
     def get_invalid_headers(self):
         # note: it is not possible to have invalid header for this auth.
@@ -186,11 +213,13 @@ class XAPIKeyAuthTestCase(AuthTestsMixin, TestBase):
 
 
 class XForwardedForAuthTestCase(AuthTestsMixin, TestBase):
-    auth_storage = authentication.IPWhitelistStorage(["127.100.100.1"], ...)
-    auth_middleware = authentication.XForwardedFor(auth_storage)
+    auth_middleware = [
+        authentication.XForwardedFor(AuthTestsMixin.auth_storage)
+    ]
+    ident_keys = ['allowed_ip']
 
     def get_authorized_headers(self):
-        return {"X-Forwarded-For": "127.100.100.1"}
+        return {"X-Forwarded-For": self.user['allowed_ip']}
 
     def get_invalid_headers(self):
         # note: it is not possible to have invalid header for this auth.
@@ -198,10 +227,11 @@ class XForwardedForAuthTestCase(AuthTestsMixin, TestBase):
 
 
 class XForwardedForWithoutStorageAuthTestCase(AuthTestsMixin, TestBase):
-    auth_middleware = authentication.XForwardedFor()
+    auth_middleware = [authentication.XForwardedFor()]
+    ident_keys = ['allowed_ip']
 
     def get_authorized_headers(self):
-        return {"X-Forwarded-For": "127.0.0.1"}
+        return {"X-Forwarded-For": self.user['allowed_ip']}
 
     def get_invalid_headers(self):
         # note: it is not possible to have invalid header for this auth.
@@ -209,12 +239,46 @@ class XForwardedForWithoutStorageAuthTestCase(AuthTestsMixin, TestBase):
 
 
 class XForwardedForWithFallbackAuthTestCase(AuthTestsMixin, TestBase):
-    auth_middleware = authentication.XForwardedFor(
-        remote_address_fallback=True
-    )
+    auth_middleware = [
+        authentication.XForwardedFor(remote_address_fallback=True)
+    ]
+    ident_keys = ['allowed_remote']
 
     def get_authorized_headers(self):
         return {}
+
+    def get_unauthorized_headers(self):
+        raise self.SkipTest
+
+    def get_invalid_headers(self):
+        # note: it is not possible to have invalid header for this auth.
+        raise self.SkipTest
+
+
+class IPRangeXForwardedForAuthTestCase(AuthTestsMixin, TestBase):
+    class IPRangeWhitelistStorage(authentication.IPRangeWhitelistStorage):
+        """Test compatible implementation of IPRangeWhitelistStorage.
+
+        This implementation simply extends the base class with
+        tests-compatible ``register()`` and ``clear()`` methods.
+        """
+
+        def register(self, identified_with, identity, user):
+            self.ip_range = identity
+            self.user = user
+
+        def clear(self):
+            self.ip_range = []
+            self.user = None
+
+    auth_storage = IPRangeWhitelistStorage([], None)
+    auth_middleware = [
+        authentication.XForwardedFor(auth_storage)
+    ]
+    ident_keys = ['allowed_ip_range']
+
+    def get_authorized_headers(self):
+        return {'X-Forwarded-For': self.user['allowed_ip_range'][0]}
 
     def get_unauthorized_headers(self):
         raise self.SkipTest
@@ -230,6 +294,7 @@ class MultipleAuthTestCase(AuthTestsMixin, TestBase):
         authentication.Anonymous(...),
         authentication.Basic(AuthTestsMixin.auth_storage),
     ]
+    ident_keys = ["token"]
 
     def get_unauthorized_headers(self):
         # note: Anonymous will always authenticate the user as a fallback auth
