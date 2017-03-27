@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/swistakm/graceful.svg?branch=master)](https://travis-ci.org/swistakm/graceful)
 [![Coverage Status](https://coveralls.io/repos/swistakm/graceful/badge.svg?branch=master)](https://coveralls.io/r/swistakm/graceful?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/graceful/badge/?version=latest)](http://graceful.readthedocs.io/en/latest/)
+[![Documentation Status](https://readthedocs.org/projects/graceful/badge/?version=latest)](https://graceful.readthedocs.io/en/latest/)
 [![Join the chat at https://gitter.im/graceful-for-falcon/Lobby](https://badges.gitter.im/graceful-for-falcon/Lobby.svg)](https://gitter.im/graceful-for-falcon/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # graceful
@@ -41,7 +41,7 @@ existing tools (like six).
 
 ## usage
 For extended tutorial and more information please refer to
-[guide](http://graceful.readthedocs.org/en/latest/guide/) included in
+[guide](https://graceful.readthedocs.org/en/latest/guide/) included in
 documentation. 
 
 Anyway here is simple example of working API made made with `graceful`:
