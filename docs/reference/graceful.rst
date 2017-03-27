@@ -25,6 +25,22 @@ graceful.serializers module
     :undoc-members:
 
 
+graceful.authentication module
+------------------------------
+
+.. automodule:: graceful.authentication
+    :members:
+    :undoc-members:
+
+
+graceful.authorization module
+-----------------------------
+
+.. automodule:: graceful.authorization
+    :members:
+    :undoc-members:
+
+
 graceful.validators module
 --------------------------
 

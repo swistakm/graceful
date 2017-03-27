@@ -17,7 +17,8 @@ version_line = list(filter(lambda l: l.startswith('VERSION'), open(init)))[0]
 VERSION = get_version(eval(version_line.split('=')[-1]))
 
 INSTALL_REQUIRES = [
-    'falcon'
+    'falcon',
+    'singledispatch',
 ]
 
 try:
