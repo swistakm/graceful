@@ -1,3 +1,4 @@
 pypandoc
 sphinx==1.4.8
 alabaster==0.7.9
+docutils<0.13.1
