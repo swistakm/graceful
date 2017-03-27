@@ -84,7 +84,7 @@ html_sidebars = {
         'navigation.html',
         'relations.html',
         'searchbox.html',
-        'donate.html',
+        'support.html',
     ]
 }
 
