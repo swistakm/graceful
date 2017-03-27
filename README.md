@@ -22,8 +22,8 @@ Features:
   through `OPTIONS` requests
 * painless validation
 * 100% tests coverage
-* falcon>=0.3.0 (tested up to 1.0.x)
-* python3 exclusive (tested from 3.3 to 3.5)
+* falcon>=0.3.0 (tested up to 1.1.x)
+* python3 exclusive (tested from 3.3 to 3.6)
 
 Community behind graceful is starting to grow but we don't have any mailing
 list yet. There was one on [Librelist](http://librelist.com/browser/graceful)

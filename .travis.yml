@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - 3.5
+  - 3.6
 
 install: pip install tox
 env:
@@ -9,11 +9,20 @@ env:
   - TOX_ENV=py33-falcon0.3
   - TOX_ENV=py34-falcon0.3
   - TOX_ENV=py35-falcon0.3
+  - TOX_ENV=py36-falcon0.3
+
 
   # falcon 1.0.x test matrix
   - TOX_ENV=py33-falcon1.0
   - TOX_ENV=py34-falcon1.0
   - TOX_ENV=py35-falcon1.0
+  - TOX_ENV=py36-falcon1.0
+
+  # falcon 1.1.x test matrix
+  - TOX_ENV=py33-falcon1.0
+  - TOX_ENV=py34-falcon1.0
+  - TOX_ENV=py35-falcon1.0
+  - TOX_ENV=py36-falcon1.0
 
   # linters and coverage
   - TOX_ENV=pep8
