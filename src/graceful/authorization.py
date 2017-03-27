@@ -31,7 +31,7 @@ def authentication_required(req, resp, resource, uri_kwargs):
         resource (object): the resource object.
         uri_kwargs (dict): keyword arguments from the URI template.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
     if 'user' not in req.context:
         args = ["Unauthorized", "This resource requires authentication"]

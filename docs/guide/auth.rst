@@ -278,6 +278,8 @@ If you need to restrict some authentication methods to specific resources
 through separate application deployments.
 
 
+.. _auth-practical-example:
+
 Practical example -- authentication with redis backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

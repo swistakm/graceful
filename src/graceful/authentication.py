@@ -3,6 +3,7 @@ import json
 import base64
 import binascii
 import re
+import abc
 
 try:
     from functools import singledispatch
@@ -14,17 +15,17 @@ except ImportError:  # pragma: nocover
 from falcon import HTTPMissingHeader, HTTPBadRequest
 
 
-class BaseUserStorage:
+class BaseUserStorage(metaclass=abc.ABCMeta):
     """Base user storage class that defines required API for user storages.
 
     All built-in graceful authentication middleware classes expect user storage
     to have compatible API. Custom authentication middlewares do not need
-    to use storages and even if they use any they do not need to have
-    compatible interfaces.
+    to use storages.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
+    @abc.abstractmethod
     def get_user(
         self, identified_with, identifier, req, resp, resource, uri_kwargs
     ):
@@ -46,18 +47,27 @@ class BaseUserStorage:
         """
         raise NotImplementedError  # pragma: nocover
 
+    @classmethod
+    def __subclasshook__(cls, klass):
+        """Verify implicit class interface."""
+        if cls is BaseUserStorage:
+            if any("get_user" in B.__dict__ for B in klass.__mro__):
+                return True
+        return NotImplemented
+
 
 class DummyUserStorage(BaseUserStorage):
-    """A dummy storage that always returns no users or specified default.
+    """A dummy storage that never returns users or returns specified default.
 
-    This storage is part of :any:`Anonymous` authentication middleware
-    but also may be useful for testing or disabling specific authentication
-    middlewares through app configuration.
+    This storage is part of :any:`Anonymous` authentication middleware.
+    It may also be useful for testing purposes or to disable specific
+    authentication middlewares through app configuration.
 
     Args:
-        user: user to return. Defaults to ``None`` (will never authenticate).
+        user: User object to return. Defaults to ``None`` (will never
+        authenticate).
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     def __init__(self, user=None):
@@ -74,19 +84,20 @@ class DummyUserStorage(BaseUserStorage):
 class IPRangeWhitelistStorage(BaseUserStorage):
     """Simple storage dedicated for :any:`XForwardedFor` authentication.
 
-    This storage expects that is used with authentication middleware that
-    returns client address from its ``identify()`` method. For example usage
-    see :any:`XForwardedFor`. Because it is IP range whitelist this storage
-    it cannot distinguish different users' IP and always returns default
-    user object. If you want to identify different users by their IP see
-    :any:`KVUserStorage`.
+    This storage expects that authentication middleware return client address
+    from its ``identify()`` method. For example usage see :any:`XForwardedFor`.
+    Because it is IP range whitelist this storage it cannot distinguish
+    different users' IP and always returns default user object. If you want to
+    identify different users by their IP see :any:`KeyValueUserStorage`.
 
     Args:
-        ip_range: any object that supports ``in`` operator in order to check
-            if identifier falls into specified whitelist. Tip: use ``iptools``.
-        user: default user to return on successful authentication.
+        ip_range: Any object that supports ``in`` operator (i.e. implements the
+            ``__cointains__`` method). The ``__contains__`` method should
+            return ``True`` if identifier falls into specified whitelist.
+            Tip: use ``iptools``.
+        user: Default user object to return on successful authentication.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     def __init__(self, ip_range, user):
@@ -120,18 +131,30 @@ class KeyValueUserStorage(BaseUserStorage):
       argument),
     * ``<identified_with>`` is the name of authentication middleware that
       provided user identifier,
-    * ``<identifier>`` is the string that identifies the user.
+    * ``<identifier>`` is the identifier object that identifies the user.
+
+    Note that this key scheme will work only for middlewares that return
+    identifiers as single string objects. Also the ``<identifier>`` part
+    of key template is a plain text value of without any hashing algorithm
+    applied. It may not be secure enough to store user secrets that way.
+
+    If you want to use this storage with middleware that uses more complex
+    identifier format/objects (e.g. the :any:`Basic` class) you will have
+    to register own identifier format in the :any:`hash_identifier` method.
+    For details see the :any:`hash_identifier` method docstring or the
+    :ref:`practical example <auth-practical-example>` section of the
+    documentation.
 
     Args:
         kv_store: Key-value store client instance (e.g. Redis client object).
             The ``kv_store`` must provide at least two methods: ``get(key)``
-            and ``set(key, value)``. Arguments and return values of these
+            and ``set(key, value)``. The arguments and return values of these
             methods must be strings.
         key_prefix: key prefix used to store client identities.
         serialization: serialization object/module that uses the
             ``dumps()``/``loads()`` protocol. Defaults to ``json``.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     def __init__(self, kv_store, key_prefix='users', serialization=None):
@@ -141,6 +164,7 @@ class KeyValueUserStorage(BaseUserStorage):
         self.serialization = serialization or json
 
     def _get_storage_key(self, identified_with, identifier):
+        """Get key string for given user identifier in consistent manner."""
         return ':'.join((
             self.key_prefix, identified_with.name,
             self.hash_identifier(identified_with, identifier),
@@ -234,7 +258,7 @@ class BaseAuthenticationMiddleware:
             for handling custom user storage backends. Defaults to middleware
             class name.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     #: challenge returned in WWW-Authenticate header on non authorized
@@ -252,10 +276,13 @@ class BaseAuthenticationMiddleware:
             name if name else self.__class__.__name__
         )
 
-        if self.only_with_storage and self.user_storage is None:
+        if (
+            self.only_with_storage and
+            not isinstance(self.user_storage, BaseUserStorage)
+        ):
             raise ValueError(
-                "{} authentication middleware requires valid storage"
-                "".format(self.__class__.__name__)
+                "{} authentication middleware requires valid storage. Got {}."
+                "".format(self.__class__.__name__, self.user_storage)
             )
 
     def process_resource(self, req, resp, resource, uri_kwargs=None):
@@ -305,10 +332,10 @@ class BaseAuthenticationMiddleware:
         """Try to find user in configured user storage object.
 
         Args:
-            identifier: user identifier.
+            identifier: User identifier.
 
         Returns:
-            user object
+            user object.
         """
         if identifier is None:
             user = None
@@ -375,7 +402,7 @@ class Basic(BaseAuthenticationMiddleware):
             for handling custom user storage backends. Defaults to middleware
             class name.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
 
     .. _RFC 7617: https://tools.ietf.org/html/rfc7616
     """
@@ -454,7 +481,7 @@ class XAPIKey(BaseAuthenticationMiddleware):
     This middleware **must** be configured with ``user_storage`` that provides
     access to database of client API keys and their identities.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     challenge = 'X-Api-Key'
@@ -485,11 +512,10 @@ class Token(BaseAuthenticationMiddleware):
 
         WWW-Authenticate: Token
 
-
     This middleware **must** be configured with ``user_storage`` that provides
     access to database of client tokens and their identities.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     challenge = 'Token'
@@ -517,13 +543,13 @@ class XForwardedFor(BaseAuthenticationMiddleware):
     """Authenticate user with ``X-Forwarded-For`` header or remote address.
 
     Args:
-        remote_address_fallback (bool): fallback to ``REMOTE_ADDR`` value from
-            WSGI environment dictionary if ``X-Forwarded-For`` header is not
-            available. Defaults to False.
+        remote_address_fallback (bool): Use fallback to ``REMOTE_ADDR`` value
+            from WSGI environment dictionary if ``X-Forwarded-For`` header is
+            not available. Defaults to ``False``.
 
 
     This authentication middleware is usually used with the
-    :any:`IPWhitelistStorage` e.g:
+    :any:`IPRangeWhitelistStorage` e.g:
 
 
     .. code-block:: python
@@ -539,7 +565,7 @@ class XForwardedFor(BaseAuthenticationMiddleware):
         )
 
         auth_middleware = authentication.XForwardedFor(
-            user_storage=authentication.IPWhitelistStorage(
+            user_storage=authentication.IPWRangehitelistStorage(
                 IP_WHITELIST, user={"username": "internal"}
             )
         )
@@ -551,9 +577,9 @@ class XForwardedFor(BaseAuthenticationMiddleware):
         are not able to ensure that contents of ``X-Forwarded-For`` header
         can be trusted. This requires proper reverse proxy and network
         configuration. It is also recommended to at least use the static
-        :any:`IPWhitelistStorage` as the user storage.
+        :any:`IPRangeWhitelistStorage` as the user storage.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     challenge = None
@@ -610,9 +636,9 @@ class Anonymous(BaseAuthenticationMiddleware):
         * Define any other authentication middleware after this one.
 
     Args:
-        user: default anonymous user object.
+        user: Default anonymous user object.
 
-    .. versionadded:: 0.3.0
+    .. versionadded:: 0.4.0
     """
 
     challenge = None
