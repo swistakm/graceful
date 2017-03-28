@@ -45,7 +45,7 @@ setup(
     version=VERSION,
     author='Michał Jaworski',
     author_email='swistakm@gmail.com',
-    description='falcon REST done with grace',
+    description='Elegant Python REST toolkit built on top of falcon',
     long_description=read_md(README),
     packages=PACKAGES,
     package_dir=PACKAGE_DIR,
@@ -57,7 +57,7 @@ setup(
 
     license="BSD",
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
@@ -67,8 +67,9 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3 :: Only',
+
         'Topic :: Internet :: WWW/HTTP :: WSGI',
     ],
 )
