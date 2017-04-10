@@ -158,74 +158,6 @@ def test_serialiser_sources_representation():
     assert recreated == {"_name": "John", "_address": "US"}
 
 
-def test_serializer_set_attribute():
-    serializer = BaseSerializer()
-
-    # test dict keys are treated as attributes
-    instance = {}
-    serializer.set_attribute(instance, 'foo', 'bar')
-    assert instance == {'foo': 'bar'}
-
-    # test normal objects atrributes are attributes indeed
-    # in scope of this method
-    class SomeObject:
-        def __init__(self):
-            self.foo = None
-
-    instance = SomeObject()
-    serializer.set_attribute(instance, 'foo', 'bar')
-    assert instance.foo == 'bar'
-
-
-def test_serializer_get_attribute():
-    serializer = BaseSerializer()
-
-    # test dict keys are treated as attributes
-    instance = {'foo': 'bar'}
-    assert serializer.get_attribute(instance, 'foo') == 'bar'
-
-    # test normal objects atrributes are attributes indeed
-    # in scope of this method
-    class SomeObject:
-        def __init__(self):
-            self.foo = 'bar'
-
-    instance = SomeObject()
-    assert serializer.get_attribute(instance, 'foo') == 'bar'
-
-    # test that getting non existent attribute returns None
-    assert serializer.get_attribute(instance, 'nonexistens') is None
-
-
-def test_serializer_source_wildcard():
-    """
-    Test that '*' wildcard causes whole instance is returned on get attribute
-    """
-    serializer = BaseSerializer()
-
-    instance = {"foo", "bar"}
-    assert serializer.get_attribute(instance, '*') == instance
-
-
-def test_serializer_source_field_with_wildcard():
-    class ExampleSerializer(BaseSerializer):
-        starfield = ExampleField(
-            details='whole object instance goes here',
-            source='*',
-        )
-
-    serializer = ExampleSerializer()
-    instance = {'foo': 'bar'}
-    representation = {"starfield": "bizbaz"}
-
-    assert serializer.to_representation(
-        instance
-    )['starfield'] == instance
-    assert serializer.from_representation(
-        representation
-    )['starfield'] == representation["starfield"]
-
-
 def test_serializer_describe():
     """ Test that serializers are self-describing
     """
@@ -287,6 +219,6 @@ def test_serializer_many_validation():
     serializer = ExampleSerializer()
 
     with pytest.raises(ValueError):
-        serializer.validate(invalid)
+        serializer.from_representation(invalid)
 
-    serializer.validate(valid)
+    serializer.from_representation(valid)

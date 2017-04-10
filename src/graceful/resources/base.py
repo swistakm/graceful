@@ -424,11 +424,11 @@ class BaseResource(metaclass=MetaResource):
 
         try:
             for representation in representations:
-                object_dict = self.serializer.from_representation(
-                    representation
+                object_dicts.append(
+                    self.serializer.from_representation(
+                        representation, partial
+                    )
                 )
-                self.serializer.validate(object_dict, partial)
-                object_dicts.append(object_dict)
 
         except DeserializationError as err:
             # when working on Resource we know that we can finally raise
