@@ -398,10 +398,10 @@ def test_whole_serializer_validation_as_hhtp_bad_request(req):
         one = StringField("one different than two")
         two = StringField("two different than one")
 
-        def validate(self, object_dict, partial=False):
-            super().validate(object_dict, partial)
+        def validate(self, instance, partial=False):
+            super().validate(instance, partial)
             # possible use case: kind of uniqueness relationship
-            if object_dict['one'] == object_dict['two']:
+            if instance['one'] == instance['two']:
                 raise ValidationError("one must be different than two")
 
     class TestResource(Resource):

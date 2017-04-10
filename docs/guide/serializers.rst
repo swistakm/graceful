@@ -110,10 +110,8 @@ All field classes accept this set of arguments:
   intead of relying on param labels.*
 
 * **source** *(str, optional):* name of internal object key/attribute
-  that will be passed to field's on ``.to_representation(value)`` call.
-  Special ``'*'`` value is allowed that will pass whole object to
-  field when making representation. If not set then default source will
-  be a field name used as a serializer's attribute.
+  that will be passed to field's on ``.to_representation(value)`` call. If not
+  set then default source is a field name used as a serializer's attribute.
 
 * **validators** *(list, optional):* list of validator callables.
 
@@ -126,14 +124,12 @@ All field classes accept this set of arguments:
 * **write_only** *(bool):* True if field is write-only and cannot be retrieved
   via GET requests.
 
-.. note::
+.. versionchanged:: 1.0.0
 
-   ``source='*'`` is in fact a dirty workaround and will not work well
-   on validation when new object instances needs to be created/updated
-   using POST/PUT requests. This works quite well with simple retrieve/list
-   type resources but in more sophisticated cases it is better to use
-   custom object properties as sources to encapsulate such fields.
-
+   Fields no no longer have special case treatment for ``source='*'`` argument.
+   If you want to access multiple object keys and values within single
+   serializer field please refer to :ref:`guide-field-attribute-access` section
+   of this document.
 
 .. _field-validation:
 
@@ -148,9 +144,9 @@ in order to provide correct HTTP responses each validator shoud raise
 .. note::
 
    Concept of validation for fields is understood here as a process of checking
-   if data of valid type (successfully parsed/processed by
-   ``.from_representation`` handler) does meet some other constraints
-   (lenght, bounds, unique, etc).
+   if data of valid type (i.e. data that was successfully parsed/processed by
+   ``.from_representation()`` handler) does meet some other constraints
+   (lenght, bounds, uniquess, etc).
 
 
 Example of simple validator usage:
@@ -179,31 +175,53 @@ Resource validation
 ~~~~~~~~~~~~~~~~~~~
 
 In most cases field level validation is all that you need but sometimes you
-need to perfom obejct level validation that needs to access multiple fields
-that are already deserialized and validated. Suggested way to do this in
-graceful is to override serializer's ``.validate()`` method and raise
-:class:`graceful.errors.ValidationError` when your validation fails. This
-exception will be then automatically translated to HTTP Bad Request response
-on resource-level handlers. Here is example:
+need to perfom validation on whole resource representation or deserialized
+object. It is possible to access multiple fields that were already deserialized
+and pre-validated directly from serializer class.
+
+You can provide your own object-level serialization handler using serializer's
+``validate()`` method. This method accepts two arguments:
+
+* **object_dict** *(dict):* it is deserialized object dictionary that already
+  passed validation. Field sources instead of their representation names are
+  used as its keys.
+
+* **partial** *(bool):* it is set to ``True`` only on partial object updates
+  (e.g. on ``PATCH`` requests). If you plan to support partial resource
+  modification you should check this field and verify if you object has
+  all the existing keys.
+
+If your validation fails you should raise the
+:class:`graceful.errors.ValidationError` exception. Following is the example
+of resource serializer with custom object-level validation:
 
 
 .. code-block:: python
 
     class DrinkSerializer():
-        alcohol = StringField("main ingredient", required=True)
-        mixed_with = StringField("what makes it tasty", required=True)
+        alcohol = StringField("main ingredient")
+        mixed_with = StringField("what makes it tasty")
 
-        def validate(self, object_dict, partial=False):
-            # note: always make sure to call super `validate()`
-            # so whole validation of fields works as expected
-            super().validate(object_dict, partial)
+        def validate(self, object_dict, partial):
+            # note: always make sure to call super `validate_object()`
+            # to make sure that per-field validation is enabled.
+
+            if partial and any([
+                'alcohol' in object_dict,
+                'mixed_with' in object_dict,
+            ]):
+                raise ValidationError(
+                    "bartender refused to change ingredients"
+                )
 
             # here is a place for your own validation
             if (
                 object_dict['alcohol'] == 'whisky' and
                 object_dict['mixed_with'] == 'cola'
             ):
-                raise ValidationError("bartender refused!')
+                raise ValidationError(
+                    "bartender refused to mix whisky with cola!"
+                )
 
 
 Custom fields
@@ -233,3 +251,88 @@ as a serialized JSON string that we would like to (de)serialize:
         def to_representation(data):
             return json.loads(data)
 
+.. _guide-field-attribute-access:
+
+
+Accessing multiple fields at once
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes you need to access multiple fields of internal object instance at
+once in order to properly represent data in your API. This is very common when
+interacting with legacy services/components that cannot be changed or when
+your storage engine simply does not allow to store nested or structured objects.
+
+Serializers generally work on per-field basis and allow only to translate field
+names between representation and application internal objects. In order to
+manipulate multiple representation or internal object instance keys within the
+single field you need to create custom field class and override one or more
+of following methods:
+
+* ``read_instance(self, instance, key_or_attribute)``: read value from the
+  object instance before serialization. The return value will be later passed
+  as an argument to ``to_representation()`` method. The ``key_or_attribute``
+  argument is field's name or source (if ``source`` explicitly specified).
+  Base implementation defaults to dictionary key lookup or object attribute
+  lookup.
+* ``read_representation(self, representation, key_or_attribute)``: read value
+  from the object instance before deserialization. The return value will be
+  later passed as an argument to ``from_representation()`` method. The
+  ``key_or_attribute`` argument the field's name. Base implementation defaults
+  to dictionary key lookup or object attribute lookup.
+* ``update_instance(self, instance, key_or_attribute, value)``: update the
+  content of object instance after deserialization. The ``value`` argument is
+  the return value of ``from_representation()`` method. The
+  ``key_or_attribute`` argument the field's name or source (if ``source``
+  explicitly specified). Base implementation defaults to dictionary key
+  assignment or object attribute assignment.
+* ``update_representation(self, representation, key_or_attribute, value)``:
+  update the content of representation instance after serialization.
+  The ``value`` argument is the return value of ``to_representation()`` method.
+  The ``key_or_attribute`` argument the field's name. Base implementation
+  defaults to dictionary key assignment or object attribute assignment.
+
+To better explain how to use these methods let's assume that due to some
+storage backend constraints we cannot save nested dictionaries. All of fields
+of some nested object will have to be stored under separate keys but we still
+want to present this to the user as separate nested dictionary. And of course
+we want to support both writes and saves.
+
+.. code-block:: python
+
+    class OwnerField(RawField):
+        def from_representation(self, data):
+            if not isinstance(data, dict):
+                raise ValueError("expected object")
+
+            return {
+                'owner_name': data.get('name'),
+                'owner_age': data.get('age'),
+            }
+
+        def to_representation(self, value):
+            return {
+                'age': value.get('owner_age'),
+                'name': value.get('owner_name'),
+            }
+
+        def validate(self, value):
+            print(value)
+            if 'owner_age' not in value or not isinstance(value['owner_age'], int):
+                raise ValidationError("invalid owner age")
+
+            if 'owner_name' not in value:
+                raise ValidationError("invalid owner name")
+
+        def update_instance(self, instance, attribute_or_key, value):
+            # we assume that instance is always a dictionary so we can
+            # use the .update() method
+            instance.update(value)
+
+        def read_instance(self, instance, attribute_or_key):
+            # .to_representation() method requires acces to whole object
+            # dictionary so we have to return whole object.
+            return instance
+
+
+Similar approach may be used to flatten nested objects into more compact
+representations.

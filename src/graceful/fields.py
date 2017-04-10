@@ -1,4 +1,5 @@
 import inspect
+from collections import Mapping, MutableMapping
 
 from graceful.validators import min_validator, max_validator
 
@@ -64,6 +65,14 @@ class BaseField:
 
             def to_representation(self, value):
                 return ["True", "False"][value]
+
+    .. versionchanged:: 1.0.0
+        Field instances no longer support ``source="*"`` to access whole object
+        for the purpose of representation serialization/deserialization. If you
+        want to access multiple fields of object instance and/or its
+        representation you must override ``read_*`` and ``update_*`` methods in
+        your custom field classes (see :ref:`guide-field-attribute-access`
+        section in documentation).
 
     """
 
@@ -184,6 +193,66 @@ class BaseField:
         """
         for validator in self.validators:
             validator(value)
+
+    def update_instance(self, instance, attribute_or_key, value):
+        """Update object instance after deserialization.
+
+        Args:
+            instance (object): dictionary or object after serialization.
+            attribute_or_key (str): field's name or source (if ``source``
+                explicitly specified).
+            value (object): return value from ``from_representation`` method.
+        """
+        if isinstance(instance, MutableMapping):
+            instance[attribute_or_key] = value
+        else:
+            setattr(instance, attribute_or_key, value)
+
+    def read_instance(self, instance, attribute_or_key):
+        """Read value from the object instance before serialization.
+
+        Args:
+            instance (object): dictionary or object before serialization.
+            attribute_or_key (str): field's name or source (if ``source``
+                explicitly specified).
+
+        Returns:
+            The value that will be later passed as an argument to
+            ``to_representation()`` method.
+        """
+        if isinstance(instance, Mapping):
+            return instance.get(attribute_or_key, None)
+
+        return getattr(instance, attribute_or_key, None)
+
+    def update_representation(self, representation, attribute_or_key, value):
+        """Update representation after field serialization.
+
+        Args:
+            instance (object): representation object.
+            attribute_or_key (str): field's name.
+            value (object): return value from ``to_representation`` method.
+        """
+        if isinstance(representation, MutableMapping):
+            representation[attribute_or_key] = value
+        else:
+            setattr(representation, attribute_or_key, value)
+
+    def read_representation(self, representation, attribute_or_key):
+        """Read value from the representation before deserialization.
+
+        Args:
+            instance (object): dictionary or object before deserialization.
+            attribute_or_key (str): field's name.
+
+        Returns:
+            The value that will be later passed as an argument to
+            ``from_representation()`` method.
+        """
+        if isinstance(representation, Mapping):
+            return representation.get(attribute_or_key, None)
+
+        return getattr(representation, attribute_or_key, None)
 
 
 class RawField(BaseField):

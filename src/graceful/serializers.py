@@ -1,20 +1,7 @@
 from collections import OrderedDict
-from collections.abc import Mapping, MutableMapping
 
 from graceful.errors import DeserializationError
 from graceful.fields import BaseField
-
-
-def _source(name, field):
-    """Translate field name to instance source name with respect to source=*.
-
-    .. deprecated::
-        This function will be removed in 1.0.0.
-    """
-    if field.source == '*':
-        return name
-    else:
-        return field.source or name
 
 
 class MetaSerializer(type):
@@ -93,12 +80,15 @@ class BaseSerializer(metaclass=MetaSerializer):
 
     """
 
+    instance_factory = dict
+    representation_factory = dict
+
     @property
     def fields(self):
         """Return dictionary of field definition objects of this serializer."""
         return getattr(self, self.__class__._fields_storage_key)
 
-    def to_representation(self, obj):
+    def to_representation(self, instance):
         """Convert given internal object instance into representation dict.
 
         Representation dict may be later serialized to the content-type
@@ -109,13 +99,13 @@ class BaseSerializer(metaclass=MetaSerializer):
         one using ``field.to_representation()`` method.
 
         Args:
-            obj (object): internal object that needs to be represented
+            instance (object): internal object that needs to be represented
 
         Returns:
             dict: representation dictionary
 
         """
-        representation = {}
+        representation = self.representation_factory()
 
         for name, field in self.fields.items():
             if field.write_only:
@@ -123,212 +113,153 @@ class BaseSerializer(metaclass=MetaSerializer):
 
             # note fields do not know their names in source representation
             # but may know what attribute they target from source object
-            attribute = self.get_attribute(obj, field.source or name)
+            attribute = field.read_instance(instance, field.source or name)
 
             if attribute is None:
                 # Skip none attributes so fields do not have to deal with them
-                representation[name] = [] if field.many else None
+                field.update_representation(
+                    representation, name, [] if field.many else None
+                )
+
             elif field.many:
-                representation[name] = [
-                    field.to_representation(item) for item in attribute
-                ]
+                field.update_representation(
+                    representation, name, [
+                        field.to_representation(item) for item in attribute
+                    ]
+                )
             else:
-                representation[name] = field.to_representation(attribute)
+                field.update_representation(
+                    representation, name, field.to_representation(attribute)
+                )
 
         return representation
 
-    def from_representation(self, representation):
+    def from_representation(self, representation, partial=False):
         """Convert given representation dict into internal object.
 
         Internal object is simply a dictionary of values with respect to field
-        sources.
-
-        This does not check if all required fields exist or values are
-        valid in terms of value validation
-        (see: :meth:`BaseField.validate()`) but still requires all of passed
-        representation values to be well formed representation (success call
-        to ``field.from_representation``).
-
-        In case of malformed representation it will run additional validation
-        only to provide a full detailed exception about all that might be
-        wrong with provided representation.
+        sources. This method does not quit on first failure to make sure that
+        as many as possible issues will be presented to the client.
 
         Args:
            representation (dict): dictionary with field representation values
 
         Raises:
-            DeserializationError: when at least one representation field
-                is not formed as expected by field object. Information
-                about additional forbidden/missing/invalid fields is provided
-                as well.
+            DeserializationError: when at least of these issues occurs:
+
+                * if at least one of representation field is not formed as
+                  expected by the field object (``ValueError`` raised by
+                  field's ``from_representation()`` method).
+                * if ``partial=False`` and at least one representation fields
+                  is missing.
+                * if any non-existing or non-writable field is provided in
+                  representation.
+                * if any custom field validator fails (raises
+                  ``ValidationError`` or ``ValueError`` exception)
+
+            ValidationError: on custom user validation checks implemented with
+                ``validate()`` handler.
 
         """
-        object_dict = {}
+        instance = self.instance_factory()
+
         failed = {}
+        invalid = {}
+
+        # note: we need to perform validation on whole representation before
+        #       validation because there is no
+        missing, forbidden = self._validate_representation(
+            representation, partial
+        )
 
         for name, field in self.fields.items():
             if name not in representation:
                 continue
 
             try:
+                raw_entry = field.read_representation(representation, name)
                 if (
                     # note: we cannot check for any sequence or iterable
                     #       because of strings and nested dicts.
-                    not isinstance(representation[name], (list, tuple)) and
+                    not isinstance(raw_entry, (list, tuple)) and
                     field.many
                 ):
                     raise ValueError("field should be sequence")
 
-                source = _source(name, field)
-                value = representation[name]
+                field_values = [
+                    field.from_representation(item)
+                    for item in ([raw_entry] if not field.many else raw_entry)
+                ]
 
-                if field.many:
-                    object_dict[source] = [
-                        field.from_representation(single_value)
-                        for single_value in value
-                    ]
-                else:
-                    object_dict[source] = field.from_representation(value)
+                for value in field_values:
+                    field.validate(value)
+
+                field.update_instance(
+                    instance,
+                    # If field does not have explicit source string then use
+                    # its name.
+                    field.source or name,
+                    # many=True fields require special care
+                    field_values if field.many else field_values[0]
+                )
 
             except ValueError as err:
                 failed[name] = str(err)
 
-        if failed:
-            # if failed to parse we eagerly perform validation so full
-            # information about what is wrong will be returned
-            try:
-                self.validate(object_dict)
-                # note: this exception can be reached with partial==True
-                # since do not support partial updates yet this has 'no cover'
-                raise DeserializationError()  # pragma: no cover
-            except DeserializationError as err:
-                err.failed = failed
-                raise
+        if any([missing, forbidden, invalid, failed]):
+            raise DeserializationError(missing, forbidden, invalid, failed)
 
-        return object_dict
+        # note: expected to raise ValidationError. It is extra feature handle
+        #       so we dont try hard to merge wit previous errors.
+        self.validate(instance, partial)
 
-    def validate(self, object_dict, partial=False):
-        """Validate given internal object returned by ``to_representation()``.
+        return instance
 
-        Internal object is validated against missing/forbidden/invalid fields
-        values using fields definitions defined in serializer.
+    def _validate_representation(self, representation, partial=False):
+        """Validate resource representation fieldwise.
 
-        Args:
-            object_dict (dict): internal object dictionart to perform
-              to validate
-            partial (bool): if set to True then incomplete object_dict
-              is accepter and will not raise any exceptions when one
-              of fields is missing
+        Check if object has all required fields to support full or partial
+        object modification/creation and ensure it does not contain any
+        forbidden fields.
 
-        Raises:
-            DeserializationError:
+        Returns:
 
+            A ``(missing, forbidden)`` tuple with lists indicating fields that
+            failed validation.
         """
-        # we are working on object_dict not an representation so there
-        # is a need to annotate sources differently
-        sources = {
-            _source(name, field): field
-            for name, field in self.fields.items()
-        }
-
-        # note: we are checking for all mising and invalid fields so we can
-        # return exception with all fields that are missing and should
-        # exist instead of single one
         missing = [
-            name for name, field in sources.items()
-            if all((not partial, name not in object_dict, not field.read_only))
+            name for name, field in self.fields.items()
+            if all((
+                not partial,
+                name not in representation,
+                not field.read_only
+            ))
         ]
 
         forbidden = [
-            name for name in object_dict
-            if any((name not in sources, sources[name].read_only))
+            name for name in representation
+            if name not in self.fields or self.fields[name].read_only
         ]
 
-        invalid = {}
-        for name, value in object_dict.items():
-            try:
-                field = sources[name]
+        return missing, forbidden
 
-                if field.many:
-                    for single_value in value:
-                        field.validate(single_value)
-                else:
-                    field.validate(value)
+    def validate(self, instance, partial=False):
+        """Validate given internal object.
 
-            except ValueError as err:
-                invalid[name] = str(err)
-
-        if any([missing, forbidden, invalid]):
-            # note: We have validated internal object instance but need to
-            #       inform the user about problems with his representation.
-            #       This is why we have to do this dirty transformation.
-            # note: This will be removed in 1.0.0 where we change how
-            #       validation works and where we remove star-like fields.
-            # refs: #42 (https://github.com/swistakm/graceful/issues/42)
-            sources_to_field_names = {
-                _source(name, field): name
-                for name, field in self.fields.items()
-            }
-
-            def _(names):
-                if isinstance(names, list):
-                    return [
-                        sources_to_field_names.get(name, name)
-                        for name in names
-                    ]
-                elif isinstance(names, dict):
-                    return {
-                        sources_to_field_names.get(name, name): value
-                        for name, value in names.items()
-                    }
-                else:
-                    return names  # pragma: nocover
-
-            raise DeserializationError(_(missing), _(forbidden), _(invalid))
-
-    def get_attribute(self, obj, attr):
-        """Get attribute of given object instance.
-
-        Reason for existence of this method is the fact that  'attribute' can
-        be also object's key from if is a dict or any other kind of mapping.
-
-        Note: it will return None if attribute key does not exist
+        Internal object is a dictionary that have sucesfully passed general
+        validation against missing/forbidden fields and was checked with
+        per-field custom validators.
 
         Args:
-            obj (object): internal object to retrieve data from
+            instance (dict): internal object instance to be validated.
+            partial (bool): if set to True then incomplete instance
+              is accepted (e.g. on PATCH requests) so it is possible that
+              not every field is available.
 
-        Returns:
-            internal object's key value or attribute
-
+        Raises:
+            ValidationError: raised when deserialized object does not meet some
+                user-defined contraints.
         """
-        # '*' is a special wildcard character that means whole object
-        # is passed
-        if attr == '*':
-            return obj
-
-        # if this is any mapping then instead of attributes use keys
-        if isinstance(obj, Mapping):
-            return obj.get(attr, None)
-
-        return getattr(obj, attr, None)
-
-    def set_attribute(self, obj, attr, value):
-        """Set value of attribute in given object instance.
-
-        Reason for existence of this method is the fact that 'attribute' can
-        be also a object's key if it is a dict or any other kind of mapping.
-
-        Args:
-            obj (object): object instance to modify
-            attr (str): attribute (or key) to change
-            value: value to set
-
-        """
-        # if this is any mutable mapping then instead of attributes use keys
-        if isinstance(obj, MutableMapping):
-            obj[attr] = value
-        else:
-            setattr(obj, attr, value)
 
     def describe(self):
         """Describe all serialized fields.

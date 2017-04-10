@@ -34,7 +34,7 @@ class DeserializationError(ValueError):
                     "forbidden: {}".format(self.forbidden)
                     if self.forbidden else ""
                 ),
-                "invalid: {}:".format(self.invalid) if self.invalid else "",
+                "invalid: {}".format(self.invalid) if self.invalid else "",
                 (
                     "failed to parse: {}".format(self.failed)
                     if self.failed else ""
