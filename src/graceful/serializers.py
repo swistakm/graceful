@@ -5,6 +5,18 @@ from graceful.errors import DeserializationError, ValidationError
 from graceful.fields import BaseField
 
 
+def _source(name, field):
+    """Translate field name to instance source name with respect to source=*.
+
+    .. deprecated::
+        This function will be removed in 1.0.0.
+    """
+    if field.source == '*':
+        return name
+    else:
+        return field.source or name
+
+
 class MetaSerializer(type):
     """Metaclass for handling serialization with field objects."""
 
@@ -159,7 +171,7 @@ class BaseSerializer(metaclass=MetaSerializer):
                 # if field has explicitly specified source then use it
                 # else fallback to field name.
                 # Note: field does not know its name
-                object_dict[field.source or name] = field.from_representation(
+                object_dict[_source(name, field)] = field.from_representation(
                     representation[name]
                 )
             except ValueError as err:
@@ -199,9 +211,7 @@ class BaseSerializer(metaclass=MetaSerializer):
         # we are working on object_dict not an representation so there
         # is a need to annotate sources differently
         sources = {
-            # TODO: handling of '*' sources here is a bit terryfying
-            # TODO: maybe this needs more care in future releases
-            field.source or name if field.source != "*" else name: field
+            _source(name, field): field
             for name, field in self.fields.items()
         }
 
@@ -226,7 +236,32 @@ class BaseSerializer(metaclass=MetaSerializer):
                 invalid[name] = str(err)
 
         if any([missing, forbidden, invalid]):
-            raise DeserializationError(missing, forbidden, invalid)
+            # note: We have validated internal object instance but need to
+            #       inform the user about problems with his representation.
+            #       This is why we have to do this dirty transformation.
+            # note: This will be removed in 1.0.0 where we change how
+            #       validation works and where we remove star-like fields.
+            # refs: #42 (https://github.com/swistakm/graceful/issues/42)
+            sources_to_field_names = {
+                _source(name, field): name
+                for name, field in self.fields.items()
+            }
+
+            def _(names):
+                if isinstance(names, list):
+                    return [
+                        sources_to_field_names.get(name, name)
+                        for name in names
+                    ]
+                elif isinstance(names, dict):
+                    return {
+                        sources_to_field_names.get(name, name): value
+                        for name, value in names.items()
+                    }
+                else:
+                    return names
+
+            raise DeserializationError(_(missing), _(forbidden), _(invalid))
 
     def get_attribute(self, obj, attr):
         """Get attribute of given object instance.
