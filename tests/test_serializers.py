@@ -207,15 +207,21 @@ def test_serializer_source_wildcard():
 
 def test_serializer_source_field_with_wildcard():
     class ExampleSerializer(BaseSerializer):
-        instance = ExampleField(
+        starfield = ExampleField(
             details='whole object instance goes here',
             source='*',
         )
 
     serializer = ExampleSerializer()
-    instance = {'foo', 'bar'}
+    instance = {'foo': 'bar'}
+    representation = {"starfield": "bizbaz"}
 
-    assert serializer.to_representation(instance)['instance'] == instance
+    assert serializer.to_representation(
+        instance
+    )['starfield'] == instance
+    assert serializer.from_representation(
+        representation
+    )['starfield'] == representation["starfield"]
 
 
 def test_serializer_describe():

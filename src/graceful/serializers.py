@@ -259,7 +259,7 @@ class BaseSerializer(metaclass=MetaSerializer):
                         for name, value in names.items()
                     }
                 else:
-                    return names
+                    return names  # pragma: nocover
 
             raise DeserializationError(_(missing), _(forbidden), _(invalid))
 
