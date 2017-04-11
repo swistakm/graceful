@@ -5,6 +5,7 @@ we test how whole framework for defining new serializers works.
 """
 import pytest
 
+import graceful
 from graceful.fields import BaseField, StringField
 from graceful.serializers import BaseSerializer
 
@@ -195,6 +196,35 @@ def test_serializer_get_attribute():
 
     # test that getting non existent attribute returns None
     assert serializer.get_attribute(instance, 'nonexistens') is None
+
+
+def test_serializer_write_only():
+    class ExampleSerializer(BaseSerializer):
+        readonly = ExampleField('A read-only field', read_only=True)
+        writeonly = ExampleField('A write-only field', write_only=True)
+
+    serializer = ExampleSerializer()
+
+    assert serializer.to_representation(
+        {"writeonly": "foo", 'readonly': 'bar'}
+    ) == {"readonly": "bar"}
+
+
+@pytest.mark.xfail(
+    graceful.VERSION[0] < 1,
+    reason="graceful<1.0.0 does not enforce validation on deserialization",
+    strict=True,
+)
+def test_serializer_read_only():
+    class ExampleSerializer(BaseSerializer):
+        readonly = ExampleField('A read-only field', read_only=True)
+        writeonly = ExampleField('A write-only field', write_only=True)
+
+    serializer = ExampleSerializer()
+
+    assert serializer.from_representation(
+        {"writeonly": "foo", 'readonly': 'bar'}
+    ) == {"writeonly": "foo"}
 
 
 def test_serializer_source_wildcard():
