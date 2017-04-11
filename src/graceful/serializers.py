@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from collections.abc import Mapping, MutableMapping
 
-from graceful.errors import DeserializationError, ValidationError
+from graceful.errors import DeserializationError
 from graceful.fields import BaseField
 
 
@@ -168,12 +168,25 @@ class BaseSerializer(metaclass=MetaSerializer):
                 continue
 
             try:
-                # if field has explicitly specified source then use it
-                # else fallback to field name.
-                # Note: field does not know its name
-                object_dict[_source(name, field)] = field.from_representation(
-                    representation[name]
-                )
+                if (
+                    # note: we cannot check for any sequence or iterable
+                    #       because of strings and nested dicts.
+                    not isinstance(representation[name], (list, tuple)) and
+                    field.many
+                ):
+                    raise ValueError("field should be sequence")
+
+                source = _source(name, field)
+                value = representation[name]
+
+                if field.many:
+                    object_dict[source] = [
+                        field.from_representation(single_value)
+                        for single_value in value
+                    ]
+                else:
+                    object_dict[source] = field.from_representation(value)
+
             except ValueError as err:
                 failed[name] = str(err)
 
@@ -229,10 +242,17 @@ class BaseSerializer(metaclass=MetaSerializer):
         ]
 
         invalid = {}
-        for name, value in object_dict.items():
+        for index, (name, value) in enumerate(object_dict.items()):
             try:
-                sources[name].validate(value)
-            except ValidationError as err:
+                field = sources[name]
+
+                if field.many:
+                    for single_value in value:
+                        field.validate(single_value)
+                else:
+                    field.validate(value)
+
+            except ValueError as err:
                 invalid[name] = str(err)
 
         if any([missing, forbidden, invalid]):

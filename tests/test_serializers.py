@@ -3,7 +3,9 @@
 All tested serializer classes should be defined within tests because
 we test how whole framework for defining new serializers works.
 """
-from graceful.fields import BaseField
+import pytest
+
+from graceful.fields import BaseField, StringField
 from graceful.serializers import BaseSerializer
 
 
@@ -245,15 +247,46 @@ def test_serializer_describe():
     ])
 
 
-def test_serialiser_representation_with_field_many():
+def test_serialiser_with_field_many():
     class UpperField(BaseField):
         def to_representation(self, value):
             return value.upper()
+
+        def from_representation(self, data):
+            return data.upper()
 
     class ExampleSerializer(BaseSerializer):
         up = UpperField(details='multiple values field', many=True)
 
     serializer = ExampleSerializer()
-    instance = {'up': ["aa", "bb", "cc"]}
+    obj = {'up': ["aa", "bb", "cc"]}
+    desired = {'up': ["AA", "BB", "CC"]}
 
-    assert serializer.to_representation(instance) == {"up": ["AA", "BB", "CC"]}
+    assert serializer.to_representation(obj) == desired
+    assert serializer.from_representation(obj) == desired
+
+    with pytest.raises(ValueError):
+        serializer.from_representation({"up": "definitely not a sequence"})
+
+
+def test_serializer_many_validation():
+    def is_upper(value):
+        if value.upper() != value:
+            raise ValueError("should be upper")
+
+    class ExampleSerializer(BaseSerializer):
+        up = StringField(
+            details='multiple values field',
+            many=True,
+            validators=[is_upper]
+        )
+
+    invalid = {'up': ["aa", "bb", "cc"]}
+    valid = {'up': ["AA", "BB", "CC"]}
+
+    serializer = ExampleSerializer()
+
+    with pytest.raises(ValueError):
+        serializer.validate(invalid)
+
+    serializer.validate(valid)
