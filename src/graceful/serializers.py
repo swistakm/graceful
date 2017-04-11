@@ -242,7 +242,7 @@ class BaseSerializer(metaclass=MetaSerializer):
         ]
 
         invalid = {}
-        for index, (name, value) in enumerate(object_dict.items()):
+        for name, value in object_dict.items():
             try:
                 field = sources[name]
 
