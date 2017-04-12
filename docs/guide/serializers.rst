@@ -260,28 +260,31 @@ manipulate multiple representation or internal object instance keys within the
 single field you need to create custom field class and override one or more
 of following methods:
 
-* ``read_instance(self, instance, key_or_attribute)``: read value from the
+* ``read_instance(self, instance, source)``: read value from the
   object instance before serialization. The return value will be later passed
-  as an argument to ``to_representation()`` method. The ``key_or_attribute``
-  argument is field's name or source (if ``source`` explicitly specified).
-  Base implementation defaults to dictionary key lookup or object attribute
-  lookup.
-* ``read_representation(self, representation, key_or_attribute)``: read value
-  from the object instance before deserialization. The return value will be
-  later passed as an argument to ``from_representation()`` method. The
-  ``key_or_attribute`` argument the field's name. Base implementation defaults
-  to dictionary key lookup or object attribute lookup.
-* ``update_instance(self, instance, key_or_attribute, value)``: update the
+  as an argument to ``to_representation()`` method. The ``source`` argument is
+  field's name or configured source name (if custom ``source`` is explicitly
+  specified for that field). Base implementation defaults to dictionary key
+  lookup or object attribute lookup.
+
+* ``update_instance(self, instance, source, value)``: update the
   content of object instance after deserialization. The ``value`` argument is
-  the return value of ``from_representation()`` method. The
-  ``key_or_attribute`` argument the field's name or source (if ``source``
-  explicitly specified). Base implementation defaults to dictionary key
+  the return value of ``from_representation()`` method. The ``source`` argument
+  is the field's name or source name (if custom ``source`` is explicitly
+  specified for that field). Base implementation defaults to dictionary key
   assignment or object attribute assignment.
-* ``update_representation(self, representation, key_or_attribute, value)``:
+
+* ``read_representation(self, representation, field_name)``: read value
+  from the representation before deserialization. The return value will be
+  later passed as an argument to ``from_representation()`` method. The
+  ``field_name`` argument is a field's name. Base implementation defaults
+  to dictionary key lookup or object attribute lookup.
+
+* ``update_representation(self, representation, field_name, value)``:
   update the content of representation instance after serialization.
   The ``value`` argument is the return value of ``to_representation()`` method.
-  The ``key_or_attribute`` argument the field's name. Base implementation
-  defaults to dictionary key assignment or object attribute assignment.
+  The ``field_name`` argument is a field's name. Base implementation
+  defaults to dictionary key assignment.
 
 To better explain how to use these methods let's assume that due to some
 storage backend constraints we cannot save nested dictionaries. All of fields
@@ -314,12 +317,12 @@ we want to support both writes and saves.
             if 'owner_name' not in value:
                 raise ValidationError("invalid owner name")
 
-        def update_instance(self, instance, attribute_or_key, value):
+        def update_instance(self, instance, source, value):
             # we assume that instance is always a dictionary so we can
             # use the .update() method
             instance.update(value)
 
-        def read_instance(self, instance, attribute_or_key):
+        def read_instance(self, instance, source):
             # .to_representation() method requires acces to whole object
             # dictionary so we have to return whole object.
             return instance
