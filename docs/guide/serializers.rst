@@ -198,9 +198,6 @@ of resource serializer with custom object-level validation:
         mixed_with = StringField("what makes it tasty")
 
         def validate(self, object_dict, partial):
-            # note: always make sure to call super `validate_object()`
-            # to make sure that per-field validation is enabled.
-
             if partial and any([
                 'alcohol' in object_dict,
                 'mixed_with' in object_dict,
@@ -311,7 +308,6 @@ we want to support both writes and saves.
             }
 
         def validate(self, value):
-            print(value)
             if 'owner_age' not in value or not isinstance(value['owner_age'], int):
                 raise ValidationError("invalid owner age")
 
