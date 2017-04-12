@@ -194,65 +194,63 @@ class BaseField:
         for validator in self.validators:
             validator(value)
 
-    def update_instance(self, instance, attribute_or_key, value):
+    def update_instance(self, instance, source, value):
         """Update object instance after deserialization.
 
         Args:
             instance (object): dictionary or object after serialization.
-            attribute_or_key (str): field's name or source (if ``source``
-                explicitly specified).
+            source (str): field's name or source if ``source`` was
+                explicitly specified for that field.
             value (object): return value from ``from_representation`` method.
         """
         if isinstance(instance, MutableMapping):
-            instance[attribute_or_key] = value
+            instance[source] = value
         else:
-            setattr(instance, attribute_or_key, value)
+            setattr(instance, source, value)
 
-    def read_instance(self, instance, attribute_or_key):
+    def read_instance(self, instance, source):
         """Read value from the object instance before serialization.
 
         Args:
             instance (object): dictionary or object before serialization.
-            attribute_or_key (str): field's name or source (if ``source``
-                explicitly specified).
+            source (str): field's name or source if ``source`` was
+                explicitly specified for that field.
 
         Returns:
             The value that will be later passed as an argument to
             ``to_representation()`` method.
         """
         if isinstance(instance, Mapping):
-            return instance.get(attribute_or_key, None)
+            return instance.get(source, None)
 
-        return getattr(instance, attribute_or_key, None)
+        return getattr(instance, source, None)
 
-    def update_representation(self, representation, attribute_or_key, value):
+    def update_representation(self, representation, field_name, value):
         """Update representation after field serialization.
 
         Args:
-            instance (object): representation object.
+            representation (dict): representation dictionary.
             attribute_or_key (str): field's name.
             value (object): return value from ``to_representation`` method.
         """
-        if isinstance(representation, MutableMapping):
-            representation[attribute_or_key] = value
-        else:
-            setattr(representation, attribute_or_key, value)
+        # note: Unlike instances, representations can only be dictionaries
+        #       and their type cannot be overriden inside of serializer's class
+        representation[field_name] = value
 
-    def read_representation(self, representation, attribute_or_key):
+    def read_representation(self, representation, field_name):
         """Read value from the representation before deserialization.
 
         Args:
-            instance (object): dictionary or object before deserialization.
-            attribute_or_key (str): field's name.
+            representation (dict): representation dictionary.
+            field_name (str): field's name.
 
         Returns:
             The value that will be later passed as an argument to
             ``from_representation()`` method.
         """
-        if isinstance(representation, Mapping):
-            return representation.get(attribute_or_key, None)
-
-        return getattr(representation, attribute_or_key, None)
+        # note: Unlike instances, representations can only be dictionaries
+        #       and their type cannot be overriden inside of serializer's class
+        return representation.get(field_name, None)
 
 
 class RawField(BaseField):

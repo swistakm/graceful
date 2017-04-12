@@ -80,8 +80,9 @@ class BaseSerializer(metaclass=MetaSerializer):
 
     """
 
+    #: Allows to override instance object constructon with custom type
+    #: like defaultdict, SimpleNamespace or database model class.
     instance_factory = dict
-    representation_factory = dict
 
     @property
     def fields(self):
@@ -105,14 +106,18 @@ class BaseSerializer(metaclass=MetaSerializer):
             dict: representation dictionary
 
         """
-        representation = self.representation_factory()
+        # note: representations does not have their custom facotries like
+        #       instances because they as only used during content-type
+        #       serialization and deserialization and cannot be manipulated
+        #       inside of resource classes.
+        representation = {}
 
         for name, field in self.fields.items():
             if field.write_only:
                 continue
 
-            # note fields do not know their names in source representation
-            # but may know what attribute they target from source object
+            # note: fields do not know their names in source representation
+            #        but may know what attribute they target from instance
             attribute = field.read_instance(instance, field.source or name)
 
             if attribute is None:
