@@ -1,3 +1,5 @@
+[![PyPI](https://img.shields.io/pypi/v/graceful.svg)](https://pypi.python.org/pypi/graceful/)
+[![PyPI](https://img.shields.io/pypi/pyversions/graceful.svg)](https://pypi.python.org/pypi/graceful/)
 [![Build Status](https://travis-ci.org/swistakm/graceful.svg?branch=master)](https://travis-ci.org/swistakm/graceful)
 [![Coverage Status](https://coveralls.io/repos/swistakm/graceful/badge.svg?branch=master)](https://coveralls.io/r/swistakm/graceful?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/graceful/badge/?version=latest)](https://graceful.readthedocs.io/en/latest/)
