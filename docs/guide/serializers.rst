@@ -117,9 +117,14 @@ All field classes accept this set of arguments:
 
 * **validators** *(list, optional):* list of validator callables.
 
-* **many** *(bool, optional)* set to True if field is in fact a list
+* **many** *(bool, optional):* set to True if field is in fact a list
   of given type objects
 
+* **read_only** *(bool):* True if field is read-only and cannot be set/modified
+  via POST, PUT, or PATCH requests.
+
+* **write_only** *(bool):* True if field is write-only and cannot be retrieved
+  via GET requests.
 
 .. note::
 

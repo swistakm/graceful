@@ -21,6 +21,15 @@ def test_base_field_implementation_hooks():
         field.from_representation(None)
 
 
+def test_base_field_write_or_read_only_not_both():
+
+    assert BaseField("Read only", read_only=True).write_only is False
+    assert BaseField("Write only", write_only=True).read_only is False
+
+    with pytest.raises(ValueError):
+        BaseField("Both", read_only=True, write_only=True)
+
+
 def test_base_field_describe():
     class SomeField(BaseField):
         type = "anything"
@@ -33,7 +42,8 @@ def test_base_field_describe():
         'details': "bar",
         'type': "anything",
         'spec': None,
-        'read_only': False
+        'read_only': False,
+        'write_only': False
     }
 
     # test extending descriptions by call with kwargs

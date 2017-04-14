@@ -118,6 +118,9 @@ class BaseSerializer(metaclass=MetaSerializer):
         representation = {}
 
         for name, field in self.fields.items():
+            if field.write_only:
+                continue
+
             # note fields do not know their names in source representation
             # but may know what attribute they target from source object
             attribute = self.get_attribute(obj, field.source or name)

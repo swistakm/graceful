@@ -35,10 +35,15 @@ class BaseField:
         validators (list): list of validator callables.
 
         many (bool): set to True if field is in fact a list of given type
-           objects
+           objects.
 
-        read_only (bool): True if field is read only and cannot be set/modified
-            by POST and PUT requests
+        read_only (bool): True if field is read-only and cannot be set/modified
+            via POST, PUT, or PATCH requests.
+
+        write_only (bool): True if field is write-only and cannot be retrieved
+            via GET requests.
+
+            .. versionadded:: 0.5.0
 
     Example:
 
@@ -77,6 +82,7 @@ class BaseField:
             validators=None,
             many=False,
             read_only=False,
+            write_only=False,
     ):
         """Initialize field definition."""
         self.label = label
@@ -85,6 +91,12 @@ class BaseField:
         self.validators = validators or []
         self.many = many
         self.read_only = read_only
+        self.write_only = write_only
+
+        if self.write_only and self.read_only:
+            raise ValueError(
+                "Field cannot be read-only and write-only at the same time."
+            )
 
     def from_representation(self, data):
         """Convert representation value to internal value.
@@ -142,6 +154,7 @@ class BaseField:
             'type': "list of {}".format(self.type) if self.many else self.type,
             'spec': self.spec,
             'read_only': self.read_only,
+            'write_only': self.write_only,
         }
         description.update(kwargs)
         return description
