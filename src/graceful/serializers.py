@@ -84,6 +84,11 @@ class BaseSerializer(metaclass=MetaSerializer):
     #: like defaultdict, SimpleNamespace or database model class.
     instance_factory = dict
 
+    def __init__(self):
+        # perf: create cached list to save some processing
+        #       time during serialization and deserialization
+        self._fields_items = list(self.fields.items())
+
     @property
     def fields(self):
         """Return dictionary of field definition objects of this serializer."""
@@ -112,7 +117,7 @@ class BaseSerializer(metaclass=MetaSerializer):
         #       inside of resource classes.
         representation = {}
 
-        for name, field in self.fields.items():
+        for name, field in self._fields_items:
             # note: fields do not know their names in source representation
             #        but may know what attribute they target from instance
             attribute = field.read_instance(instance, field.source or name)
@@ -174,7 +179,7 @@ class BaseSerializer(metaclass=MetaSerializer):
             representation, partial
         )
 
-        for name, field in self.fields.items():
+        for name, field in self._fields_items:
             if name not in representation:
                 continue
 
@@ -230,7 +235,7 @@ class BaseSerializer(metaclass=MetaSerializer):
             failed validation.
         """
         missing = [
-            name for name, field in self.fields.items()
+            name for name, field in self._fields_items
             if all((
                 not partial,
                 name not in representation,
