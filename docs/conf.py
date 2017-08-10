@@ -94,6 +94,7 @@ html_theme_options = {
     'github_button': True,
     'github_type': 'star',
     'sidebar_includehidden': True,
+    'fixed_sidebar': True,
     'description': "elegant Python REST toolkit built on top of falcon",
 }
 
