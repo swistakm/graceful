@@ -43,6 +43,9 @@ class BaseField:
         write_only (bool): True if field is write-only and cannot be retrieved
             via GET requests.
 
+        allow_null (bool): True if field can have intentional `null` values
+            which will be interpreted as `None` afterwards.
+
             .. versionadded:: 0.5.0
 
     Example:
@@ -83,6 +86,7 @@ class BaseField:
             many=False,
             read_only=False,
             write_only=False,
+            allow_null=False,
     ):
         """Initialize field definition."""
         self.label = label
@@ -92,6 +96,7 @@ class BaseField:
         self.many = many
         self.read_only = read_only
         self.write_only = write_only
+        self.allow_null = allow_null
 
         if self.write_only and self.read_only:
             raise ValueError(
@@ -155,6 +160,7 @@ class BaseField:
             'spec': self.spec,
             'read_only': self.read_only,
             'write_only': self.write_only,
+            'allow_null': self.allow_null,
         }
         description.update(kwargs)
         return description
