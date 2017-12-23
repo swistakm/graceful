@@ -43,6 +43,7 @@ def index_error_as_404(fun):
 class ExampleSerializer(BaseSerializer):
     writable = RawField("testing writable field")
     readonly = RawField("testing readonly field", read_only=True)
+    nullable = RawField("testing nullable field", allow_null=True)
     unsigned = IntField(
         "testing validated field",
         validators=[min_validator(0)]
@@ -230,7 +231,8 @@ class UpdateTestsMixin:
         )
 
     def test_update(self):
-        result = self.do_update(0, {'writable': 'changed', 'unsigned': 12})
+        result = self.do_update(0, {'writable': 'changed', 'unsigned': 12,
+                                    'nullable': None})
         self._assert_consistent_form(result)
         assert self.srmock.status == falcon.HTTP_ACCEPTED
 
@@ -238,7 +240,8 @@ class UpdateTestsMixin:
         assert body['content']['writable'] == 'changed'
 
     def test_update_not_found(self):
-        self.do_update(1, {'writable': 'changed', 'unsigned': 12})
+        self.do_update(1, {'writable': 'changed', 'unsigned': 12,
+                           'nullable': None})
         assert self.srmock.status == falcon.HTTP_NOT_FOUND
 
     def test_update_readonly_field_error(self):
@@ -365,7 +368,7 @@ class CreateTestsMixin:
 
     def test_create(self):
         result = self.do_create(
-            {'writable': 'changed', 'unsigned': 12}
+            {'writable': 'changed', 'unsigned': 12, 'nullable': None}
         )
         self._assert_consistent_form(result)
 
@@ -403,7 +406,7 @@ class CreateTestsMixin:
 
     def test_create_bulk(self):
         self.do_create_bulk(
-            [{'writable': 'changed', 'unsigned': 12}]
+            [{'writable': 'changed', 'unsigned': 12, 'nullable': None}]
         )
         assert self.srmock.status == falcon.HTTP_CREATED
 
