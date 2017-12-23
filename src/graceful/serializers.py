@@ -183,12 +183,20 @@ class BaseSerializer(metaclass=MetaSerializer):
                 value = representation[name]
 
                 if field.many:
-                    object_dict[source] = [
-                        field.from_representation(single_value)
-                        for single_value in value
-                    ]
+                    if not field.allow_null:
+                        object_dict[source] = [
+                            field.from_representation(single_value)
+                            for single_value in value
+                        ]
+                    else:
+                        object_dict[source] = [
+                            field.from_representation(
+                                single_value) if single_value is not None else None
+                            for single_value in value
+                        ]
                 else:
-                    object_dict[source] = field.from_representation(value)
+                    object_dict[source] = field.from_representation(
+                        value) if not field.allow_null else None
 
             except ValueError as err:
                 failed[name] = str(err)
