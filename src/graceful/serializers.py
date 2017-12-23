@@ -191,7 +191,8 @@ class BaseSerializer(metaclass=MetaSerializer):
                     else:
                         object_dict[source] = [
                             field.from_representation(
-                                single_value) if single_value is not None else None
+                                single_value) if
+                            single_value is not None else None
                             for single_value in value
                         ]
                 else:

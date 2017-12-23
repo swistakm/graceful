@@ -266,7 +266,8 @@ def test_serializer_allow_null_deserialization():
 
     serializer = ExampleSerializer()
 
-    assert serializer.from_representation({"nullable": None}) == {"nullable": None}
+    assert serializer.from_representation({"nullable": None}) == {
+        "nullable": None}
 
 
 def test_serializer_allow_null_validation():

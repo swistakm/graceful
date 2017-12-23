@@ -231,7 +231,8 @@ class UpdateTestsMixin:
         )
 
     def test_update(self):
-        result = self.do_update(0, {'writable': 'changed', 'unsigned': 12, 'nullable': None})
+        result = self.do_update(0, {'writable': 'changed', 'unsigned': 12,
+                                    'nullable': None})
         self._assert_consistent_form(result)
         assert self.srmock.status == falcon.HTTP_ACCEPTED
 
@@ -239,7 +240,8 @@ class UpdateTestsMixin:
         assert body['content']['writable'] == 'changed'
 
     def test_update_not_found(self):
-        self.do_update(1, {'writable': 'changed', 'unsigned': 12, 'nullable': None})
+        self.do_update(1, {'writable': 'changed', 'unsigned': 12,
+                           'nullable': None})
         assert self.srmock.status == falcon.HTTP_NOT_FOUND
 
     def test_update_readonly_field_error(self):
