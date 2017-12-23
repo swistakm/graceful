@@ -371,3 +371,51 @@ def test_serializer_many_validation():
         serializer.validate(invalid)
 
     serializer.validate(valid)
+
+
+def test_serializer_with_field_many_allow_null():
+    class ManyNullableField(BaseField):
+        def to_representation(self, value):
+            return value
+
+        def from_representation(self, data):
+            return data
+
+    class ExampleSerializer(BaseSerializer):
+        many_nullable = ManyNullableField(details='multiple values field',
+                                          many=True, allow_null=True)
+
+    serializer = ExampleSerializer()
+    obj = {'many_nullable': ["a", None, "b", None]}
+    desired = {'many_nullable': ["a", None, "b", None]}
+
+    assert serializer.to_representation(obj) == desired
+    assert serializer.from_representation(obj) == desired
+
+    with pytest.raises(ValueError):
+        serializer.from_representation(
+            {"many_nullable": "definitely not a sequence"})
+
+
+def test_serializer_many_allow_null_validation():
+    def is_upper(value):
+        if value and value.upper() != value:
+            raise ValueError("should be upper")
+
+    class ExampleSerializer(BaseSerializer):
+        up = StringField(
+            details='multiple values field',
+            many=True,
+            validators=[is_upper],
+            allow_null=True,
+        )
+
+    invalid = {'up': ["aa", None, "cc"]}
+    valid = {'up': ["AA", None, "CC"]}
+
+    serializer = ExampleSerializer()
+
+    with pytest.raises(ValueError):
+        serializer.validate(invalid)
+
+    serializer.validate(valid)
