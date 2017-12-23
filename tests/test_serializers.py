@@ -249,6 +249,34 @@ def test_serializer_read_only_write_only_validation():
         serializer.validate({'readonly': 'x'})
 
 
+def test_serializer_allow_null_serialization():
+    class ExampleSerializer(BaseSerializer):
+        nullable = ExampleField('A nullable field', allow_null=True)
+
+    serializer = ExampleSerializer()
+
+    assert serializer.to_representation(
+        {"nullable": None}
+    ) == {"nullable": None}
+
+
+def test_serializer_allow_null_deserialization():
+    class ExampleSerializer(BaseSerializer):
+        nullable = ExampleField('A nullable field', allow_null=True)
+
+    serializer = ExampleSerializer()
+
+    assert serializer.from_representation({"nullable": None}) == {"nullable": None}
+
+
+def test_serializer_allow_null_validation():
+    class ExampleSerializer(BaseSerializer):
+        nullable = ExampleField('A nullable field', allow_null=True)
+
+    serializer = ExampleSerializer()
+    serializer.validate({"nullable": None})
+
+
 def test_serializer_source_wildcard():
     """
     Test that '*' wildcard causes whole instance is returned on get attribute
