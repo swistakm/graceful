@@ -267,7 +267,8 @@ def test_serializer_allow_null_deserialization():
     serializer = ExampleSerializer()
 
     assert serializer.from_representation({"nullable": None}) == {
-        "nullable": None}
+        "nullable": None
+    }
 
 
 def test_serializer_allow_null_validation():
@@ -382,8 +383,10 @@ def test_serializer_with_field_many_allow_null():
             return data
 
     class ExampleSerializer(BaseSerializer):
-        many_nullable = ManyNullableField(details='multiple values field',
-                                          many=True, allow_null=True)
+        many_nullable = ManyNullableField(
+            details='multiple values field',
+            many=True, allow_null=True
+        )
 
     serializer = ExampleSerializer()
     obj = {'many_nullable': ["a", None, "b", None]}
@@ -394,7 +397,8 @@ def test_serializer_with_field_many_allow_null():
 
     with pytest.raises(ValueError):
         serializer.from_representation(
-            {"many_nullable": "definitely not a sequence"})
+            {"many_nullable": "definitely not a sequence"}
+        )
 
 
 def test_serializer_many_allow_null_validation():
