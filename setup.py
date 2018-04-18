@@ -9,6 +9,11 @@ def get_version(version_tuple):
     return '.'.join(map(str, version_tuple))
 
 
+def read(filename):
+    with open(filename, 'r') as file:
+        return file.read()
+
+
 init = os.path.join(
     os.path.dirname(__file__),
     'src', 'graceful', '__init__.py'
@@ -21,21 +26,6 @@ INSTALL_REQUIRES = [
     'singledispatch',
 ]
 
-try:
-    from pypandoc import convert
-
-    def read_md(f):
-        return convert(f, 'rst')
-
-except ImportError:
-    convert = None
-    print(
-        "warning: pypandoc module not found, could not convert Markdown to RST"
-    )
-
-    def read_md(f):
-        return open(f, 'r').read()  # noqa
-
 README = os.path.join(os.path.dirname(__file__), 'README.md')
 PACKAGES = find_packages('src')
 PACKAGE_DIR = {'': 'src'}
@@ -46,7 +36,8 @@ setup(
     author='Michał Jaworski',
     author_email='swistakm@gmail.com',
     description='Elegant Python REST toolkit built on top of falcon',
-    long_description=read_md(README),
+    long_description=read(README),
+    long_description_content_type="text/markdown",
     packages=PACKAGES,
     package_dir=PACKAGE_DIR,
 
