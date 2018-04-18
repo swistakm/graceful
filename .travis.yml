@@ -13,16 +13,16 @@ env:
 matrix:
   include:
     - python: 3.6
-      env: TOX_ENV=py36-falcon0.3,py36-falcon1.0,py36-falcon1.1
+      env: TOX_ENV=py36-falcon0.3,py36-falcon1.0,py36-falcon1.1,py36-falcon1.2,py36-falcon1.3,py36-falcon1.4
 
     - python: 3.5
-      env: TOX_ENV=py35-falcon0.3,py35-falcon1.0,py35-falcon1.1
+      env: TOX_ENV=py35-falcon0.3,py35-falcon1.0,py35-falcon1.1,py36-falcon1.2,py36-falcon1.3,py36-falcon1.4
 
     - python: 3.4
-      env: TOX_ENV=py34-falcon0.3,py34-falcon1.0,py34-falcon1.1
+      env: TOX_ENV=py34-falcon0.3,py34-falcon1.0,py34-falcon1.1,py36-falcon1.2,py36-falcon1.3,py36-falcon1.4
 
     - python: 3.3
-      env: TOX_ENV=py33-falcon0.3,py33-falcon1.0,py33-falcon1.1
+      env: TOX_ENV=py33-falcon0.3,py33-falcon1.0,py33-falcon1.1,py36-falcon1.2,py36-falcon1.3,py36-falcon1.4
 
 script:
   - tox -e $TOX_ENV
