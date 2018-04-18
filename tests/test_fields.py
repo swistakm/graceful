@@ -94,6 +94,16 @@ def test_raw_field(data_type):
     assert instance == recreated
 
 
+def test_raw_field_allow_null():
+    field = RawField("field that allows nulls", allow_null=True)
+
+    assert field.from_representation(None) is None
+    assert field.from_representation("foo") == "foo"
+
+    assert field.to_representation(None) is None
+    assert field.to_representation("foo") == "foo"
+
+
 def test_string_field():
     field = StringField("test str field")
 
