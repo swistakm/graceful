@@ -280,6 +280,7 @@ def test_serializer_allow_null_deserialization():
         "nullable": "not_null"
     }
 
+
 def test_serializer_allow_null_validation():
     class ExampleSerializer(BaseSerializer):
         nullable = ExampleField('A nullable field', allow_null=True)

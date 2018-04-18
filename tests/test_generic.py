@@ -1,6 +1,5 @@
 from functools import wraps
 import json
-from unittest import TestCase
 
 import pytest
 
@@ -140,32 +139,36 @@ class ExamplePaginatedListCreateAPI(PaginatedListCreateAPI, StoredResource):
         return validated
 
 
-class ImplementationHooksTests(TestCase):
-    def test_update(self):
-        with pytest.raises(NotImplementedError):
-            RetrieveUpdateDeleteAPI().update(None, None)
+def test_implementation_hook_update():
+    with pytest.raises(NotImplementedError):
+        RetrieveUpdateDeleteAPI().update(None, None)
 
-    def test_retrieve(self):
-        with pytest.raises(NotImplementedError):
-            RetrieveUpdateDeleteAPI().retrieve(None, None)
 
-    def test_delete(self):
-        with pytest.raises(NotImplementedError):
-            RetrieveUpdateDeleteAPI().delete(None, None)
+def test_implementation_hook_retrieve():
+    with pytest.raises(NotImplementedError):
+        RetrieveUpdateDeleteAPI().retrieve(None, None)
 
-    def test_list(self):
-        with pytest.raises(NotImplementedError):
-            PaginatedListCreateAPI().list(None, None)
 
-    def test_create(self):
-        with pytest.raises(NotImplementedError):
-            PaginatedListCreateAPI().create(None, None)
+def test_implementation_hook_delete():
+    with pytest.raises(NotImplementedError):
+        RetrieveUpdateDeleteAPI().delete(None, None)
 
-    def test_create_bulk(self):
-        with pytest.raises(NotImplementedError):
-            # note: create_bulk() is already implemented but it should
-            #       reuse create() that is not implemented
-            PaginatedListCreateAPI().create_bulk(None, None, validated=[{}])
+
+def test_implementation_hook_list():
+    with pytest.raises(NotImplementedError):
+        PaginatedListCreateAPI().list(None, None)
+
+
+def test_implementation_hook_create():
+    with pytest.raises(NotImplementedError):
+        PaginatedListCreateAPI().create(None, None)
+
+
+def test_implementation_hook_create_bulk():
+    with pytest.raises(NotImplementedError):
+        # note: create_bulk() is already implemented but it should
+        #       reuse create() that is not implemented
+        PaginatedListCreateAPI().create_bulk(None, None, validated=[{}])
 
 
 class GenericsTestBase(TestBase):
@@ -417,7 +420,7 @@ class CreateTestsMixin:
         assert self.srmock.status == falcon.HTTP_BAD_REQUEST
 
 
-# actual test cases classes here
+# actual test case classes here
 
 class RetrieveTestCase(
     RetrieveTestsMixin,
